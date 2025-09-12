@@ -1,0 +1,17 @@
+server:
+  port: 8080   # porta di default
+
+spring:
+  application:
+    name: enel-bitrix24-integration
+
+enel:
+  token: ${ENEL_TOKEN:defaultEnelToken}
+bitrix24:
+  url: ${BITRIX24_URL:https://demo.bitrix24.com/rest/1/demoWebhook/crm.lead.add.json}
+
+
+logging:
+  level:
+    root: INFO
+    com.example.enelbitrix24: INFO
