@@ -1,0 +1,18 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  port: 8080   # porta standard
+
+enel:
+  token: ${ENEL_TOKEN}   # letto solo da variabile d’ambiente
+
+bitrix24:
+  url: ${BITRIX24_URL}   # letto solo da variabile d’ambiente
+
+logging:
+  level:
+    root: INFO
+    com.example.enel_bitrix24_integration: INFO

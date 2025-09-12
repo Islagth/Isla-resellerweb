@@ -14,4 +14,4 @@ bitrix24:
 logging:
   level:
     root: INFO
-    com.example.enelbitrix24: INFO
+    com.example.enel_bitrix24_integration: INFO
