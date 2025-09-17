@@ -1,20 +1,18 @@
 package com.example.enel_bitrix24_integration.config;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
-@ConfigurationProperties(prefix = "enel")
+@Getter
+@Setter
+@Configuration
+@ConfigurationProperties(prefix = "enel.api")
 public class EnelProperties {
 
-    /**
-     * Token di autenticazione fornito da Enel.
-     * Caricato da application.yml o variabile d'ambiente.
-     */
-    private String token;
+    private String baseUrl;
+    private String authUrl;
+    private String clientId;
+    private String clientJwt;
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
 }

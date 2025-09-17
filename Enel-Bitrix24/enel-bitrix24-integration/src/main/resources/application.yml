@@ -6,9 +6,14 @@ spring:
     name: enel-bitrix24-integration
 
 enel:
-  token: ${ENEL_TOKEN:defaultEnelToken}
+  api:
+    base-url: https://api.enel.com/v1/
+    auth-url: https://auth.enel.com/oauth/token
+    client-id: ${ENEL_CLIENT_ID}
+    client-jwt: ${ENEL_CLIENT_JWT}
+
 bitrix24:
-  url: ${BITRIX24_URL:https://demo.bitrix24.com/rest/1/demoWebhook/crm.lead.add.json}
+  url: ${BITRIX24_URL}
 
 
 logging:
