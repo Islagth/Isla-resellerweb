@@ -3,10 +3,9 @@ import com.example.enel_bitrix24_integration.security.TokenService;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.client.RestTemplate;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
-import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,7 +27,7 @@ class TokenServiceIntegrationTest {
 
     @Test
     void testGetAccessToken_FullFlow() throws Exception {
-        // 👉 Mock risposta del token endpoint
+        // Mock risposta token endpoint
         wireMockServer.stubFor(post(urlEqualTo("/oauth2/token"))
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.OK.value())
@@ -36,13 +35,13 @@ class TokenServiceIntegrationTest {
                         .withBody("{\"access_token\":\"mocked-token-123\",\"expires_in\":300}")
                 ));
 
-        TokenService tokenService = new TokenService();
+        TokenService tokenService = new TokenService(new RestTemplate());
 
         // Inietto valori via reflection
         setField(tokenService, "authUrl", "http://localhost:8089/oauth2/token");
         setField(tokenService, "clientId", "my-client-id");
 
-        // JWK fake (non serve validazione reale in questo test, basta che sia parsabile)
+        // JWK fake (non serve validazione reale in questo test)
         String fakeJwk = """
             {
               "kty": "RSA",
@@ -56,13 +55,13 @@ class TokenServiceIntegrationTest {
             """;
         setField(tokenService, "clientJwk", fakeJwk);
 
-        // 👉 Eseguo richiesta
+        // Eseguo richiesta
         String token = tokenService.getAccessToken();
 
         assertEquals("mocked-token-123", token);
         assertNotNull(token);
 
-        // 👉 Verifico che WireMock abbia ricevuto la chiamata corretta
+        // Verifica WireMock ha ricevuto la chiamata corretta
         wireMockServer.verify(postRequestedFor(urlEqualTo("/oauth2/token"))
                 .withRequestBody(containing("grant_type=client_credentials"))
                 .withRequestBody(containing("client_id=my-client-id"))
@@ -73,7 +72,7 @@ class TokenServiceIntegrationTest {
         System.out.println("✅ Access token ottenuto: " + token);
     }
 
-    // Utility per settare campi privati
+    // Utility per impostare campi privati via reflection
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = TokenService.class.getDeclaredField(fieldName);
         field.setAccessible(true);
