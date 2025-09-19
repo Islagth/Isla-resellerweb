@@ -41,7 +41,6 @@ class TokenServiceIntegrationTest {
         setField(tokenService, "authUrl", "http://localhost:8089/oauth2/token");
         setField(tokenService, "clientId", "my-client-id");
 
-        // JWK fake (non serve validazione reale in questo test)
         String fakeJwk = """
             {
               "kty": "RSA",
@@ -54,6 +53,11 @@ class TokenServiceIntegrationTest {
             }
             """;
         setField(tokenService, "clientJwk", fakeJwk);
+
+        // Inizializza la chiave RSA (chiama init())
+        var initMethod = TokenService.class.getDeclaredMethod("init");
+        initMethod.setAccessible(true);
+        initMethod.invoke(tokenService);
 
         // Eseguo richiesta
         String token = tokenService.getAccessToken();

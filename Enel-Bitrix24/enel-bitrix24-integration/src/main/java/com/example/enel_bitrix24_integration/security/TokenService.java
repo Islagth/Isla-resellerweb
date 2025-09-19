@@ -5,11 +5,13 @@ import com.nimbusds.jose.crypto.*;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import java.time.Instant;
 import java.util.Date;
@@ -28,21 +30,34 @@ public class TokenService {
     private String clientId;
 
     @Value("${enel.api.client-jwk}")
-    private String clientJwk; // Contiene il JWK RSA (pubblica + privata), proteggere adeguatamente
+    private String clientJwk; // Proteggere opportunamente il JWK
 
-    private String accessToken;
-    private Instant expiryTime;
+    private volatile String accessToken;
+
+    private volatile Instant expiryTime;
+
+    private RSAKey rsaKey;
 
     private final RestTemplate restTemplate;
 
-    // Costruttore con iniezione RestTemplate (meglio che creare ogni volta)
     public TokenService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
+    @PostConstruct
+    public void init() {
+        try {
+            // Parsing del JWK una sola volta per performance e sicurezza
+            this.rsaKey = RSAKey.parse(clientJwk);
+        } catch (Exception e) {
+            logger.error("Errore nel parsing della JWK RSA: ", e);
+            throw new IllegalStateException("Configurazione JWK invalida", e);
+        }
+    }
+
     /**
-     * Restituisce il token d'accesso, rigenerandolo se scaduto o assente.
-     * Metodo sincronizzato per evitare richieste concorrenti di token.
+     * Restituisce il token di accesso, rigenerandolo se scaduto o assente.
+     * Sincronizzato per evitare race condition in ambiente multi-thread.
      */
     public synchronized String getAccessToken() {
         if (accessToken == null || Instant.now().isAfter(expiryTime)) {
@@ -52,84 +67,77 @@ public class TokenService {
     }
 
     /**
-     * Effettua la chiamata HTTP per ottenere un nuovo access token da Enel.
+     * Esegue la chiamata HTTP per ottenere un nuovo token di accesso da Enel.
      */
     private void refreshToken() {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-            // Costruisco e firmo il JWT client assertion dinamicamente
             String clientAssertion = buildClientAssertion();
 
-            // Corpo della richiesta con parametri URL-encoded
             String body = "grant_type=client_credentials" +
                     "&client_id=" + clientId +
                     "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" +
                     "&client_assertion=" + clientAssertion +
-                    "&scope=api.partner"; // Scope richiesto da documentazione Enel
+                    "&scope=api.partner";
 
             HttpEntity<String> request = new HttpEntity<>(body, headers);
 
-            // Chiamata POST al token endpoint
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(authUrl, HttpMethod.POST, request, (Class<Map<String, Object>>) (Class) Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(authUrl, HttpMethod.POST, request, (Class<Map<String,Object>>)(Class) Map.class);
 
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> resp = response.getBody();
-                this.accessToken = (String) resp.get("access_token");
+                String newToken = (String) resp.get("access_token");
                 Integer expiresIn = (Integer) resp.get("expires_in");
-                if (expiresIn == null) {
-                    throw new IllegalStateException("Il campo expires_in è mancante nella risposta.");
+
+                if (newToken == null || expiresIn == null) {
+                    throw new IllegalStateException("Risposta token incompleta: access_token o expires_in mancante");
                 }
-                // Imposto scadenza token con margine di sicurezza di 60 secondi
+
+                this.accessToken = newToken;
                 this.expiryTime = Instant.now().plusSeconds(expiresIn - 60);
                 logger.info("Token ottenuto con successo, scadenza tra {} secondi.", expiresIn);
+
             } else {
-                throw new IllegalStateException("Errore ottenendo il token Enel: " + response.getStatusCode());
+                throw new IllegalStateException("Errore HTTP nella richiesta token: " + response.getStatusCode());
             }
+
+        } catch (RestClientException e) {
+            logger.error("Errore di comunicazione con il server di autenticazione Enel", e);
+            throw new RuntimeException("Errore di comunicazione con il server di autenticazione Enel", e);
         } catch (Exception e) {
-            logger.error("Errore durante la richiesta di refresh del token Enel", e);
-            throw new RuntimeException("Errore ottenendo il token Enel", e);
+            logger.error("Errore imprevisto durante la richiesta di token", e);
+            throw new RuntimeException("Errore imprevisto durante la richiesta di token", e);
         }
     }
 
     /**
-     * Costruisce e firma un client_assertion JWT come richiesto dalla API Enel.
-     * @return JWT serializzato come stringa
+     * Costruisce e firma il client_assertion JWT necessario per la richiesta token.
      */
     private String buildClientAssertion() {
         try {
-            // Parsing della stringa JWK RSA in oggetto RSAKey
-            RSAKey rsaJWK = RSAKey.parse(clientJwk);
-
-            // Creazione firmatario con chiave privata RSA
-            JWSSigner signer = new RSASSASigner(rsaJWK.toPrivateKey());
-
+            JWSSigner signer = new RSASSASigner(rsaKey.toPrivateKey());
             Instant now = Instant.now();
 
-            // Costruzione claims richiesti per client assertion
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                    .issuer(clientId)                   // iss = clientId
-                    .subject(clientId)                  // sub = clientId
-                    .audience(authUrl)                  // aud = URL token endpoint
-                    .issueTime(Date.from(now))          // iat = ora corrente
-                    .expirationTime(Date.from(now.plusSeconds(300))) // exp = +5 minuti
-                    .jwtID(UUID.randomUUID().toString()) // jti = identità unica
+                    .issuer(clientId)
+                    .subject(clientId)
+                    .audience(authUrl)
+                    .issueTime(Date.from(now))
+                    .expirationTime(Date.from(now.plusSeconds(300)))
+                    .jwtID(UUID.randomUUID().toString())
                     .build();
 
-            // Header JWT con algoritmo RS256
             SignedJWT signedJWT = new SignedJWT(
                     new JWSHeader.Builder(JWSAlgorithm.RS256)
                             .type(JOSEObjectType.JWT)
                             .build(),
-                    claims
-            );
+                    claims);
 
-            // Firma JWT
             signedJWT.sign(signer);
 
             return signedJWT.serialize();
-
         } catch (Exception e) {
             logger.error("Errore nella generazione del client_assertion JWT", e);
             throw new RuntimeException("Errore nella generazione del client_assertion JWT", e);

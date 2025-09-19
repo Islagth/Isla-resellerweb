@@ -29,21 +29,38 @@ public class EnelWebhookController {
 
         logger.info("Ricevuta nuova richiesta di lead da Enel.");
 
-        // 🔐 Validazione del Bearer token
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
-        }
+        try {
+            //Validazione del Bearer token tramite metodo dedicato
+            if (!isAuthorized(authHeader)) {
+                logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+            }
 
-        // 👉 Invio del lead a Bitrix24
-        Bitrix24Response response = bitrix24Service.createLead(request);
-        logger.info("Lead inviato correttamente a Bitrix24");
-        return ResponseEntity.ok(response);
+            // Invio del lead a Bitrix24
+            Bitrix24Response response = bitrix24Service.createLead(request);
+            logger.info("Lead inviato correttamente a Bitrix24");
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Errore di validazione: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("BAD_REQUEST", ex.getMessage()));
+
+        } catch (Exception ex) {
+            logger.error("Errore interno durante la creazione del lead", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("INTERNAL_SERVER_ERROR", "Errore interno al server, riprova più tardi"));
+        }
     }
 
-    // 🚩 Metodo di supporto per rendere il codice più leggibile
+    // Metodo migliorato, separando la validazione dal controllo della stringa
     private boolean isAuthorized(String authHeader) {
-        return authHeader != null && authHeader.equals("Bearer " + enelProperties.getClientJwt());
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return false;
+        }
+        String token = authHeader.substring(7);
+        // Verifica il token in modo più robusto (es. confronto su token decodificato o via servizio)
+        return token.equals(enelProperties.getClientJwt());
     }
 }

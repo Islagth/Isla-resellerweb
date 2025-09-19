@@ -20,22 +20,16 @@ import java.util.Map;
 
 @Service
 public class Bitrix24Service {
-
     private static final Logger logger = LoggerFactory.getLogger(Bitrix24Service.class);
 
     private final Bitrix24Properties properties;
     private final RestTemplate restTemplate;
 
-    // Il RestTemplate viene creato nel costruttore e riutilizzato per ogni chiamata
     public Bitrix24Service(Bitrix24Properties properties) {
         this.properties = properties;
         this.restTemplate = createRestTemplate();
     }
 
-    /**
-     * Configura e restituisce un RestTemplate con timeout personalizzati per evitare
-     * blocchi lunghi in caso di problemi di rete.
-     */
     public RestTemplate createRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
@@ -43,22 +37,12 @@ public class Bitrix24Service {
         return new RestTemplate(factory);
     }
 
-    /**
-     * Crea un lead su Bitrix24 tramite chiamata POST.
-     * Utilizza Spring Retry per ritentare in caso di errori di connessione.
-     *
-     * @param request dati del lead provenienti da Enel
-     * @return risposta da Bitrix24, o nuova istanza vuota in caso di fallimento
-     * @throws RestClientException in caso di errore di rete irreversibile
-     */
     @Retryable(
             value = {RestClientException.class},
             maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2) // 1s, 2s, 4s di attesa tra retry
+            backoff = @Backoff(delay = 1000, multiplier = 2) // Retry con backoff esponenziale
     )
     public Bitrix24Response createLead(EnelLeadRequest request) {
-
-        // Mappatura dei campi da EnelLeadRequest a formato richiesto da Bitrix24
         Map<String, Object> leadData = new HashMap<>();
         leadData.put("CAMPAIGN_ID", request.getCampaign_Id());
         leadData.put("TELEFONO_CONTATTO", request.getTelefono_Contatto());
@@ -68,7 +52,6 @@ public class Bitrix24Service {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(leadData, headers);
 
         try {
@@ -78,31 +61,27 @@ public class Bitrix24Service {
                     Bitrix24Response.class
             );
 
-            // Gestione della risposta: successo se 2xx e body non nullo
             if (responseEntity.getStatusCode().is2xxSuccessful() && responseEntity.getBody() != null) {
                 logger.info("✅ Lead creato su Bitrix24 con risultato: {}", responseEntity.getBody().getResult());
                 return responseEntity.getBody();
             } else {
-                logger.warn("⚠Errore Bitrix24: codice HTTP {}", responseEntity.getStatusCode());
-                Bitrix24Response errorResponse = new Bitrix24Response();
-                errorResponse.setError("Errore: codice HTTP " + responseEntity.getStatusCode());
-                errorResponse.setEsitoTelefonata(EsitoTelefonata.KO_NON_INTERESSATO);
-                return errorResponse;
+                logger.warn("⚠ Errore Bitrix24, codice HTTP {}", responseEntity.getStatusCode());
+                return createErrorResponse("Errore: codice HTTP " + responseEntity.getStatusCode(),
+                        EsitoTelefonata.KO_NON_INTERESSATO);
             }
-
-            // Gestione eccezioni rest client con messaggio custom e stato di errore dedicato
         } catch (RestClientException ex) {
             logger.error("Connessione a Bitrix24 fallita", ex);
-            Bitrix24Response errorResponse = new Bitrix24Response();
-            errorResponse.setError(ex.getMessage());
-            errorResponse.setEsitoTelefonata(EsitoTelefonata.KO_NUMERO_INESISTENTE);
-            return errorResponse;
+            return createErrorResponse(ex.getMessage(), EsitoTelefonata.KO_NUMERO_INESISTENTE);
         } catch (Exception ex) {
             logger.error("Errore inatteso durante creazione lead", ex);
-            Bitrix24Response errorResponse = new Bitrix24Response();
-            errorResponse.setError("Errore interno: " + ex.getMessage());
-            errorResponse.setEsitoTelefonata(EsitoTelefonata.KO_NUMERO_INESISTENTE);
-            return errorResponse;
+            return createErrorResponse("Errore interno: " + ex.getMessage(), EsitoTelefonata.KO_NUMERO_INESISTENTE);
         }
+    }
+
+    private Bitrix24Response createErrorResponse(String errorMessage, EsitoTelefonata esito) {
+        Bitrix24Response errorResponse = new Bitrix24Response();
+        errorResponse.setError(errorMessage);
+        errorResponse.setEsitoTelefonata(esito);
+        return errorResponse;
     }
 }

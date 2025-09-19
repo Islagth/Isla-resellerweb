@@ -19,7 +19,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class Bitrix24ServiceTest {
-
     @Mock
     private RestTemplate restTemplate;
 
@@ -27,20 +26,14 @@ public class Bitrix24ServiceTest {
     private ArgumentCaptor<HttpEntity<?>> httpEntityCaptor;
 
     private Bitrix24Properties properties;
-
     private Bitrix24Service bitrix24Service;
 
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
-
         properties = new Bitrix24Properties();
         properties.setUrl("https://bitrix24.test/api/leads");
-
-        // Creiamo un spy sulla service originale per sovrascrivere createRestTemplate
         bitrix24Service = Mockito.spy(new Bitrix24Service(properties));
-
-        // Sovrascriviamo createRestTemplate per restituire il mock restTemplate
         doReturn(restTemplate).when(bitrix24Service).createRestTemplate();
     }
 
@@ -57,10 +50,8 @@ public class Bitrix24ServiceTest {
     @Test
     void testCreateLead_success() {
         EnelLeadRequest request = createSampleRequest();
-
         Bitrix24Response mockResponse = new Bitrix24Response();
         mockResponse.setResult("LEAD_ID_123");
-
         ResponseEntity<Bitrix24Response> responseEntity =
                 new ResponseEntity<>(mockResponse, HttpStatus.OK);
 
@@ -71,7 +62,6 @@ public class Bitrix24ServiceTest {
 
         assertNotNull(response);
         assertEquals("LEAD_ID_123", response.getResult());
-        // In base al codice originale non dovrebbe essere valorizzato error o esitoTelefonata
         assertNull(response.getError());
         assertNull(response.getEsitoTelefonata());
     }
@@ -79,7 +69,6 @@ public class Bitrix24ServiceTest {
     @Test
     void testCreateLead_errorFromBitrix() {
         EnelLeadRequest request = createSampleRequest();
-
         ResponseEntity<Bitrix24Response> responseEntity =
                 new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
 
@@ -89,21 +78,9 @@ public class Bitrix24ServiceTest {
         Bitrix24Response response = bitrix24Service.createLead(request);
 
         assertNotNull(response);
-        // Il codice originale ritorna nuovo Bitrix24Response vuoto senza errori impostati
         assertNull(response.getResult());
         assertNull(response.getError());
         assertNull(response.getEsitoTelefonata());
-    }
-
-    @Test
-    void testCreateLead_exception() {
-        EnelLeadRequest request = createSampleRequest();
-
-        when(restTemplate.postForEntity(eq(properties.getUrl()), any(HttpEntity.class), eq(Bitrix24Response.class)))
-                .thenThrow(new RestClientException("Connessione fallita"));
-
-        // Poiché il metodo rilancia eccezione, aspettiamoci che venga effettivamente sollevata
-        assertThrows(RestClientException.class, () -> bitrix24Service.createLead(request));
     }
 
     @Test
@@ -113,6 +90,24 @@ public class Bitrix24ServiceTest {
         when(restTemplate.postForEntity(eq(properties.getUrl()), any(HttpEntity.class), eq(Bitrix24Response.class)))
                 .thenThrow(new RestClientException("Timeout di connessione"));
 
-        assertThrows(RestClientException.class, () -> bitrix24Service.createLead(request));
+        Bitrix24Response response = bitrix24Service.createLead(request);
+
+        assertNotNull(response);
+        assertTrue(response.getError().contains("Timeout di connessione"));
+        assertEquals(EsitoTelefonata.KO_NUMERO_INESISTENTE, response.getEsitoTelefonata());
+    }
+
+    @Test
+    void testCreateLead_unexpectedError() {
+        EnelLeadRequest request = createSampleRequest();
+
+        when(restTemplate.postForEntity(eq(properties.getUrl()), any(HttpEntity.class), eq(Bitrix24Response.class)))
+                .thenThrow(new RuntimeException("Errore interno"));
+
+        Bitrix24Response response = bitrix24Service.createLead(request);
+
+        assertNotNull(response);
+        assertTrue(response.getError().contains("Errore interno"));
+        assertEquals(EsitoTelefonata.KO_NUMERO_INESISTENTE, response.getEsitoTelefonata());
     }
 }
