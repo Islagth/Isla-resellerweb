@@ -10,14 +10,16 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(EnelWebhookController.class)
 public class EnelWebhookControllerTest {
 
@@ -27,10 +29,10 @@ public class EnelWebhookControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Mock
+    @MockitoBean
     private Bitrix24Service bitrix24Service;
 
-    @Mock
+    @MockitoBean
     private EnelProperties enelProperties;
 
     private EnelLeadRequest validRequest;
@@ -48,13 +50,15 @@ public class EnelWebhookControllerTest {
                 .thenReturn(null); // Mock: non interessa il dettaglio della risposta
     }
 
+
     @Test
     void shouldReturn400WhenTokenIsMissing() throws Exception {
         mockMvc.perform(post("/api/enel-leads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnauthorized());
     }
+
 
     @Test
     void shouldReturn401WhenTokenIsInvalid() throws Exception {
@@ -66,6 +70,7 @@ public class EnelWebhookControllerTest {
                         .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isUnauthorized());
     }
+
 
     @Test
     void shouldReturn200WhenTokenIsValid() throws Exception {

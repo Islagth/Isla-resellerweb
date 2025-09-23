@@ -25,22 +25,16 @@ public class Bitrix24Service {
     private final Bitrix24Properties properties;
     private final RestTemplate restTemplate;
 
-    public Bitrix24Service(Bitrix24Properties properties) {
+    // Costruttore con injection
+    public Bitrix24Service(Bitrix24Properties properties, RestTemplate restTemplate) {
         this.properties = properties;
-        this.restTemplate = createRestTemplate();
-    }
-
-    public RestTemplate createRestTemplate() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
-        factory.setReadTimeout((int) Duration.ofSeconds(10).toMillis());
-        return new RestTemplate(factory);
+        this.restTemplate = restTemplate;
     }
 
     @Retryable(
             value = {RestClientException.class},
             maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2) // Retry con backoff esponenziale
+            backoff = @Backoff(delay = 1000, multiplier = 2)
     )
     public Bitrix24Response createLead(EnelLeadRequest request) {
         Map<String, Object> leadData = new HashMap<>();
@@ -70,8 +64,8 @@ public class Bitrix24Service {
                         EsitoTelefonata.KO_NON_INTERESSATO);
             }
         } catch (RestClientException ex) {
-            logger.error("Connessione a Bitrix24 fallita", ex);
-            return createErrorResponse(ex.getMessage(), EsitoTelefonata.KO_NUMERO_INESISTENTE);
+            logger.error("Connessione a Bitrix24 fallita, rilancio eccezione per retry", ex);
+            throw ex; // <-- RILANCIA l'eccezione
         } catch (Exception ex) {
             logger.error("Errore inatteso durante creazione lead", ex);
             return createErrorResponse("Errore interno: " + ex.getMessage(), EsitoTelefonata.KO_NUMERO_INESISTENTE);
@@ -85,3 +79,4 @@ public class Bitrix24Service {
         return errorResponse;
     }
 }
+

@@ -42,15 +42,15 @@ class TokenServiceIntegrationTest {
         setField(tokenService, "clientId", "my-client-id");
 
         String fakeJwk = """
-            {
-              "kty": "RSA",
-              "d": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-              "e": "AQAB",
-              "n": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-              "alg": "RS256",
-              "use": "sig",
-              "kid": "test-key-id"
-            }
+                {
+                         "kty": "RSA",
+                         "d": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                         "e": "AQAB",
+                         "n": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                         "alg": "RS256",
+                         "use": "sig",
+                         "kid": "my-key-id"
+                       }
             """;
         setField(tokenService, "clientJwk", fakeJwk);
 

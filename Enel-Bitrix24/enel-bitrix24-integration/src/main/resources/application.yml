@@ -9,8 +9,17 @@ enel:
   api:
     base-url: https://api.enel.com/v1/
     auth-url: https://auth.enel.com/oauth/token
-    client-id: ${ENEL_CLIENT_ID}
-    client-jwt: ${ENEL_CLIENT_JWT}
+    client-id: ${ENEL_CLIENT_ID:768c8279-a1a6-4ac3-83a2-792e97ee6303}
+    client-jwk: |
+      {
+          "kty": "RSA",
+          "d": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "e": "AQAB",
+          "n": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          "alg": "RS256",
+          "use": "sig",
+          "kid": "my-key-id"
+        }
 
 bitrix24:
   url: ${BITRIX24_URL}

@@ -16,15 +16,15 @@ class TokenServiceTest {
 
     // Usa un JWK valido (RSA privato) preso dal configuration, da sostituire con uno reale per test
     private static final String JWK_JSON = """
-        {
-          "kty": "RSA",
-          "d": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-          "e": "AQAB",
-          "n": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-          "alg": "RS256",
-          "use": "sig",
-          "kid": "my-key-id"
-        }
+            {
+                               "kty": "RSA",
+                               "d": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                               "e": "AQAB",
+                               "n": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                               "alg": "RS256",
+                               "use": "sig",
+                               "kid": "my-key-id"
+                             }
         """;
 
     @Test
