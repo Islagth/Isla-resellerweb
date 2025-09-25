@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "EnelController API Test",
+    "_postman_id": "enel-api-test-001",
+    "description": "Collezione completa per testare tutti gli endpoint Enel-Bitrix24, con casi positivi e negativi.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Crea Contatto Lavorato - OK",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"campo1\": \"valore\", \"campo2\": \"valore\" }"
+        },
+        "url": { "raw": "http://localhost:8080/api/enel-leads", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads"] }
+      }
+    },
+    {
+      "name": "Crea Contatto Lavorato - Token Errato",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer ERRORE" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"campo1\": \"valore\", \"campo2\": \"valore\" }"
+        },
+        "url": { "raw": "http://localhost:8080/api/enel-leads", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads"] }
+      }
+    },
+    {
+      "name": "Crea Contatto Lavorato - Dati Mancanti",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": { "raw": "http://localhost:8080/api/enel-leads", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads"] }
+      }
+    },
+    {
+      "name": "Crea Contatto Lavorato - Bitrix24 Down",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"campo1\": \"valore\", \"campo2\": \"valore\" }"
+        },
+        "url": { "raw": "http://localhost:8080/api/enel-leads", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads"] }
+      }
+    },
+    {
+      "name": "Lista lotti da scaricare - OK",
+      "request": {
+        "method": "GET",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer <VALID_TOKEN>"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/ultimi", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "ultimi"] }
+      }
+    },
+    {
+      "name": "Lista lotti da scaricare - Token Errato",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer ERRORE" }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/ultimi", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "ultimi"] }
+      }
+    },
+    {
+      "name": "Scarica lotto JSON - OK",
+      "request": {
+        "method": "GET",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer <VALID_TOKEN>"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/123/json", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "123", "json"] }
+      }
+    },
+    {
+      "name": "Scarica lotto ZIP - OK",
+      "request": {
+        "method": "GET",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer <VALID_TOKEN>"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/123/zip", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "123", "zip"] }
+      }
+    },
+    {
+      "name": "Scarica lotto blacklist ZIP - OK",
+      "request": {
+        "method": "GET",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer <VALID_TOKEN>"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/blacklist/123/zip", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "blacklist", "123", "zip"] }
+      }
+    },
+    {
+      "name": "Lista blacklist - OK",
+      "request": {
+        "method": "GET",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer <VALID_TOKEN>"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/ultimiBlacklist", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "ultimiBlacklist"] }
+      }
+    },
+    {
+      "name": "Conferma lotto blacklist scaricato - OK",
+      "request": {
+        "method": "POST",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer <VALID_TOKEN>"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/123/conferma", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "123", "conferma"] }
+      }
+    },
+    {
+      "name": "Conferma lotto blacklist scaricato - Token Errato",
+      "request": {
+        "method": "POST",
+        "header": [{
+          "key": "Authorization",
+          "value": "Bearer ERRORE"
+        }],
+        "url": { "raw": "http://localhost:8080/api/enel-leads/123/conferma", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["api", "enel-leads", "123", "conferma"] }
+      }
+    }
+  ]
+}
