@@ -7,9 +7,9 @@ spring:
 
 enel:
   api:
-    base-url: https://api.enel.com/v1/
-    auth-url: https://auth.enel.com/oauth/token
-    client-id: ${ENEL_CLIENT_ID:768c8279-a1a6-4ac3-83a2-792e97ee6303}
+    base-url: https://enel.in-voice.it
+    auth-url: https://enel.in-voice.it/oauth2/token
+    client-id: ${ENEL_CLIENT_ID}
     client-jwk: |
       {
           "kty": "RSA",
@@ -21,8 +21,6 @@ enel:
           "kid": "my-key-id"
         }
 
-bitrix24:
-  url: ${BITRIX24_URL}
 
 
 logging:

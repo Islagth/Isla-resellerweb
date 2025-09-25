@@ -1,15 +1,12 @@
 package com.example.enel_bitrix24_integration.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-@AllArgsConstructor
-public class ErrorResponse {
+public class LeadResponse {
 
-    private String error;
+    private boolean success;
+    private Long workedId;
     private String message;
 
-
 }
-
