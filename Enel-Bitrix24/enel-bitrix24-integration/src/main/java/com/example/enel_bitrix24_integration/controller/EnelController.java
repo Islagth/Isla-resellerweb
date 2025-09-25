@@ -1,0 +1,246 @@
+package com.example.enel_bitrix24_integration.controller;
+import com.example.enel_bitrix24_integration.config.EnelProperties;
+import com.example.enel_bitrix24_integration.dto.*;
+import com.example.enel_bitrix24_integration.service.BitrixService;
+import com.example.enel_bitrix24_integration.service.BlacklistService;
+import com.example.enel_bitrix24_integration.service.LottoService;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/enel-leads")
+@RequiredArgsConstructor
+public class EnelController {
+
+    private static final Logger logger = LoggerFactory.getLogger(EnelController.class);
+
+    private final LottoService lottoService;
+    private final BlacklistService blacklistService;
+    private final BitrixService bitrixService;
+    private final EnelProperties enelProperties;
+
+    // Metodo dedicato per la validazione del Bearer token
+    private boolean isAuthorized(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return false;
+        }
+        String token = authHeader.substring(7);
+        // Verifica token in modo robusto (es. confronto con token configurato)
+        return token.equals(enelProperties.getClientJwt());
+    }
+
+    //Crea contatto lavorato
+    @PostMapping
+    public ResponseEntity<?> creaContattoLavorato(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestBody LeadRequest request) {
+        try {
+            // Validazione del Bearer token tramite metodo dedicato
+            if (!isAuthorized(authHeader)) {
+                logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+            }
+
+            LeadResponse response = bitrixService.invioLavorato(request);
+
+            if (response.isSuccess()) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.badRequest().body(response);
+            }
+
+        } catch (Exception e) {
+            logger.error("Errore durante la chiamata al servizio creaContattoLavorato", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("INTERNAL_ERROR", e.getMessage()));
+        }
+    }
+
+    //Richiesta lista lotti da scaricare
+    @GetMapping("/ultimi")
+    public ResponseEntity<?> getUltimiLotti(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Validazione del Bearer token tramite metodo dedicato
+        if (!isAuthorized(authHeader)) {
+            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+        }
+
+        List<LottoDTO> lotti = lottoService.verificaLottiDisponibili();
+        if (lotti.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(lotti);
+    }
+
+    // Scarica lotto JSON → restituisce il contenuto
+    @GetMapping("/{idLotto}/json")
+    public ResponseEntity<?> scaricaJson(
+            @PathVariable String idLotto,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Validazione del Bearer token tramite metodo dedicato
+        if (!isAuthorized(authHeader)) {
+            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+        }
+
+        try {
+            String json = lottoService.scaricaLottoJson(idLotto);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(json);
+        } catch (Exception e) {
+            String errMsg = e.getMessage();
+            if ("Slice Id not found".equals(errMsg)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("success", false, "message", errMsg));
+            } else if ("Slice Id not available".equals(errMsg)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("success", false, "message", errMsg));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("success", false, "message", "Errore interno"));
+            }
+        }
+    }
+
+    // Scarica lotto ZIP → restituisce il file binario
+    @GetMapping("/{idLotto}/zip")
+    public ResponseEntity<?> scaricaZip(
+            @PathVariable String idLotto,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (!isAuthorized(authHeader)) {
+            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+        }
+
+        try {
+            byte[] zipData = lottoService.scaricaLottoZip(idLotto);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotto_" + idLotto + ".zip")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(zipData);
+
+        } catch (RuntimeException e) {
+            String message = e.getMessage();
+            if ("Slice Id not found".equals(message)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("false", "Slice Id not found"));
+            } else if ("Slice Id not available".equals(message)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("false", "Slice Id not available"));
+            } else {
+                logger.error("Errore download ZIP lotto {}: {}", idLotto, message, e);
+                return ResponseEntity.internalServerError()
+                        .body(new ErrorResponse("false", "Errore download ZIP lotto " + idLotto + ": " + message));
+            }
+        } catch (Exception e) {
+            logger.error("Errore generico download ZIP lotto {}: {}", idLotto, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(new ErrorResponse("false", "Errore generico download ZIP lotto " + idLotto));
+        }
+    }
+
+
+
+    //Richiesta lista lotti blacklist da scaricare
+    @GetMapping("/ultimiBlacklist")
+    public ResponseEntity<?> getUltimiLottiBlacklist(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Validazione del Bearer token tramite metodo dedicato
+        if (!isAuthorized(authHeader)) {
+            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+        }
+
+        List<LottoBlacklistDTO> lottiB = blacklistService.verificaBlacklistDisponibili();
+        if (lottiB.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(lottiB);
+    }
+
+
+    // Scarica lotto blacklist ZIP → restituisce il file binario
+    @GetMapping("blacklist/{idLotto}/zip")
+    public ResponseEntity<?> scaricaZipBlacklist(
+            @PathVariable Long idLotto,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Validazione del Bearer token tramite metodo dedicato
+        if (!isAuthorized(authHeader)) {
+            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+        }
+
+        try {
+            byte[] zipDataBlacklist = blacklistService.scaricaLottoBlacklistZip(idLotto);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotto_blacklist" + idLotto + ".zip")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(zipDataBlacklist);
+
+        } catch (RuntimeException e) {
+            String message = e.getMessage();
+            if ("Slice Id not found".equals(message)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("false", "Slice Id not found"));
+            } else if ("Slice Id not available".equals(message)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("false", "Slice Id not available"));
+            } else {
+                logger.error("Errore download ZIP lotto blacklist {}: {}", idLotto, message, e);
+                return ResponseEntity.internalServerError()
+                        .body(new ErrorResponse("false", "Errore download ZIP lotto blacklist " + idLotto + ": " + message));
+            }
+        } catch (Exception e) {
+            logger.error("Errore generico download ZIP lotto blacklist {}: {}", idLotto, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(new ErrorResponse("false", "Errore generico download ZIP lotto blacklist" + idLotto));
+        }
+    }
+    
+
+    //Invia conferma di processamento di lotto di notifica blacklist
+    @PostMapping("/{id}/conferma")
+    public ResponseEntity<?> confermaLotto(
+            @PathVariable("id") long idLotto,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        // Validazione del Bearer token tramite metodo dedicato
+        if (!isAuthorized(authHeader)) {
+            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+        }
+
+        try {
+            blacklistService.confermaLotto(idLotto);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Lotto " + idLotto + " scaricato correttamente."));
+        } catch (IllegalArgumentException e) {
+            // esempio di messaggio specifico (es. id non valido)
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Id Lotto Blacklist non valido"));
+        } catch (Exception e) {
+            logger.error("Errore durante la conferma del lotto {}: {}", idLotto, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Errore durante la conferma del lotto " + idLotto + ": " + e.getMessage()));
+        }
+    }
+
+
+}
