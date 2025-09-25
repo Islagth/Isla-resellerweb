@@ -38,16 +38,15 @@ Il sistema supporta:
 
 Il progetto è organizzato principalmente sotto il package `src/main/java/com/example/enelbitrix24/`, con la seguente struttura:
 
+<pre style="background:#f4f4f4; padding:10px;">
 src/main/java/com/example/enelbitrix24/
-├── config/ → Configurazioni applicative (EnelProperties, Bitrix24Properties, RetryConfig)
-├── controller/ → Controller REST (EnelWebhookController)
-├── dto/ → Data Transfer Objects (EnelLeadRequest, EnelLeadResponse, Bitrix24Response)
-├── enums/ → Enumerazioni (EsitoTelefonata)
-├── service/ → Logica applicativa (Bitrix24Service, TokenService, EnelClient)
-├── lotto/ → (Servizi, dto, controller Lotto e Blacklist)
-└── EnelBitrix24Application.java → Classe principale Spring Boot che avvia l’applicazione
-
-text
+ ├── config/          → Configurazioni applicative (EnelProperties, SecurityConfig, RetryConfig)
+ ├── controller/      → Controller REST (EnelController)
+ ├── dto/             → Data Transfer Objects (LeadRequest,LeadResponse, ErrorResponse, LottoDTO, LottoBlacklistDTO)
+ ├── security/           → Gestione Token (TokenService, EnelClient)
+ ├── service/         → Logica applicativa (BitrixService, LottoService, BlacklistService)
+ └── EnelBitrix24Application.java
+    </pre>
 
 ---
 
