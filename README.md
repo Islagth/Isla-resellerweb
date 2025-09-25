@@ -125,7 +125,7 @@ Elementi non obbligatori:
 - `chatHistory`: testo trascrizione chat  
 
 **Esempio JSON richiesta:**
-
+<pre style="background:#f4f4f4; padding:10px;">
 {
 "workedCode": "3423333333",
 "worked_date": "2021/30/06 15:13:00",
@@ -136,7 +136,7 @@ Elementi non obbligatori:
 "campaignId": 123456,
 "contactId": 456123
 }
-
+ </pre>
 text
 
 ---
@@ -147,16 +147,16 @@ text
 git clone <repository-url>
 cd <repository-folder>
 
-text
+
 2. Configurare `application.yml` con i parametri corretti.
 3. Costruire il progetto con Maven:
 mvn clean install
 
-text
+
 4. Avviare l’applicazione:
 mvn spring-boot:run
 
-text
+
 5. Interagire con le API REST esposte.
 
 ---
