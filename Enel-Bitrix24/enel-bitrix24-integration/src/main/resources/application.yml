@@ -24,6 +24,8 @@ enel:
 
 
 logging:
+  file:
+    name: logs/app.log
   level:
     root: INFO
-    com.example.enel_bitrix24_integration: INFO
+    com.example.enel_bitrix24_integration: DEBUG
