@@ -13,6 +13,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .requiresChannel(channel -> channel.anyRequest().requiresSecure()) // Forza HTTPS
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**")) // Disabilita CSRF solo per /api/**
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/public/**").permitAll()
