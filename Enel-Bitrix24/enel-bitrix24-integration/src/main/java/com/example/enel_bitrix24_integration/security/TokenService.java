@@ -13,6 +13,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
@@ -61,7 +63,10 @@ public class TokenService {
      */
     public synchronized String getAccessToken() {
         if (accessToken == null || Instant.now().isAfter(expiryTime)) {
+            logger.info("Token assente o scaduto, avvio refresh token.");
             refreshToken();
+        } else {
+            logger.debug("Token valido ancora disponibile, scadenza tra {} secondi", Duration.between(Instant.now(), expiryTime).getSeconds());
         }
         return accessToken;
     }
@@ -70,11 +75,13 @@ public class TokenService {
      * Esegue la chiamata HTTP per ottenere un nuovo token di accesso da Enel.
      */
     private void refreshToken() {
+        logger.info("Start refresh token: invio richiesta a {}", authUrl);
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             String clientAssertion = buildClientAssertion();
+            logger.debug("JWT client_assertion generato.");
 
             String body = "grant_type=client_credentials" +
                     "&client_id=" + clientId +
@@ -85,6 +92,7 @@ public class TokenService {
             HttpEntity<String> request = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(authUrl, HttpMethod.POST, request, (Class<Map<String,Object>>)(Class) Map.class);
+            logger.debug("Risposta ottenuta con status: {}", response.getStatusCode());
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> resp = response.getBody();
@@ -92,7 +100,9 @@ public class TokenService {
                 Integer expiresIn = (Integer) resp.get("expires_in");
 
                 if (newToken == null || expiresIn == null) {
-                    throw new IllegalStateException("Risposta token incompleta: access_token o expires_in mancante");
+                    String msg = "Risposta token incompleta: access_token o expires_in mancante";
+                    logger.error(msg);
+                    throw new IllegalStateException(msg);
                 }
 
                 this.accessToken = newToken;
@@ -100,9 +110,10 @@ public class TokenService {
                 logger.info("Token ottenuto con successo, scadenza tra {} secondi.", expiresIn);
 
             } else {
-                throw new IllegalStateException("Errore HTTP nella richiesta token: " + response.getStatusCode());
+                String msg = "Errore HTTP nella richiesta token: " + response.getStatusCode();
+                logger.error(msg);
+                throw new IllegalStateException(msg);
             }
-
         } catch (RestClientException e) {
             logger.error("Errore di comunicazione con il server di autenticazione Enel", e);
             throw new RuntimeException("Errore di comunicazione con il server di autenticazione Enel", e);
@@ -116,6 +127,7 @@ public class TokenService {
      * Costruisce e firma il client_assertion JWT necessario per la richiesta token.
      */
     private String buildClientAssertion() {
+        logger.debug("Generazione client_assertion JWT iniziata");
         try {
             JWSSigner signer = new RSASSASigner(rsaKey.toPrivateKey());
             Instant now = Instant.now();
@@ -136,7 +148,7 @@ public class TokenService {
                     claims);
 
             signedJWT.sign(signer);
-
+            logger.debug("Client_assertion JWT firmato correttamente");
             return signedJWT.serialize();
         } catch (Exception e) {
             logger.error("Errore nella generazione del client_assertion JWT", e);

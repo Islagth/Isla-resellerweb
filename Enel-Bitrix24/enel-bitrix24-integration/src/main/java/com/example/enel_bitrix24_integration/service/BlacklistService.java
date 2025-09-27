@@ -5,6 +5,8 @@ import com.example.enel_bitrix24_integration.dto.LottoDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,32 +32,31 @@ public class BlacklistService {
     @Getter
     private List<LottoBlacklistDTO> ultimiLottiBlacklist = new ArrayList<>();
 
+    private static final Logger logger = LoggerFactory.getLogger(BlacklistService.class);
+
     public BlacklistService(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 
 
-    // Eseguito ogni minuto
     @Scheduled(fixedRate = 60000)
     public List<LottoBlacklistDTO> verificaBlacklistDisponibili() {
         try {
             String url = baseUrl + "/partner-api/v5/blacklist";
-            ResponseEntity<String> response =
-                    restTemplate.getForEntity(new URI(url), String.class);
+            ResponseEntity<String> response = restTemplate.getForEntity(new URI(url), String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 ultimiLottiBlacklist = Arrays.asList(objectMapper.readValue(response.getBody(), LottoBlacklistDTO[].class));
-                System.out.println("Lotti blacklist aggiornati: " + ultimiLottiBlacklist.size());
+                logger.info("Lotti blacklist aggiornati: {}", ultimiLottiBlacklist.size());
             } else {
-                System.err.println("Errore nella chiamata API esterna: " + response.getStatusCode());
+                logger.error("Errore nella chiamata API esterna: {}", response.getStatusCode());
             }
         } catch (Exception e) {
-            System.err.println("Errore durante la verifica lotti di blacklist: " + e.getMessage());
+            logger.error("Errore durante la verifica lotti di blacklist: {}", e.getMessage(), e);
         }
         return ultimiLottiBlacklist;
     }
-
 
     public byte[] scaricaLottoBlacklistZip(long idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/blacklist/" + idLotto + ".zip";
@@ -64,19 +65,23 @@ public class BlacklistService {
         if (response.getStatusCode() == HttpStatus.OK) {
             byte[] zipDataBlacklist = response.getBody();
             if (zipDataBlacklist != null && zipDataBlacklist.length > 0) {
-                return zipDataBlacklist; // ritorna il binario al controller
+                logger.info("Scaricamento ZIP lotto blacklist {} riuscito, dimensione: {} bytes", idLotto, zipDataBlacklist.length);
+                return zipDataBlacklist;
             } else {
+                logger.error("Errore scaricamento ZIP per lotto blacklist {}: contenuto vuoto", idLotto);
                 throw new RuntimeException("Errore scaricamento ZIP per lotto blacklist " + idLotto);
             }
         } else if (response.getStatusCode() == HttpStatus.NOT_FOUND) {
+            logger.error("Slice Id not found per lotto blacklist {}", idLotto);
             throw new RuntimeException("Slice Id not found");
         } else if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
+            logger.error("Slice Id not available per lotto blacklist {}", idLotto);
             throw new RuntimeException("Slice Id not available");
         } else {
+            logger.error("Errore inatteso scaricamento lotto blacklist {}: {}", idLotto, response.getStatusCode());
             throw new RuntimeException("Errore inatteso: " + response.getStatusCode());
         }
     }
-
 
     public void confermaLotto(long idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/blacklist/" + idLotto;
@@ -87,12 +92,17 @@ public class BlacklistService {
             JsonNode root = mapper.readTree(response.getBody());
             boolean success = root.path("success").asBoolean(false);
             if (success) {
-                System.out.println("Lotto " + idLotto + " scaricato correttamente.");
+                logger.info("Lotto {} scaricato correttamente", idLotto);
             } else {
                 String message = root.path("message").asText("Errore sconosciuto");
+                logger.error("Errore conferma lotto {}: {}", idLotto, message);
                 throw new RuntimeException("Errore conferma lotto " + idLotto + ": " + message);
             }
+        } else {
+            logger.error("Errore nella risposta conferma lotto {}: status {}", idLotto, response.getStatusCode());
+            throw new RuntimeException("Errore conferma lotto, status: " + response.getStatusCode());
         }
     }
+
 
 }
