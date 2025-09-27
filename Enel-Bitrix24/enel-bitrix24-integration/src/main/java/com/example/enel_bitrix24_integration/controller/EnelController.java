@@ -1,5 +1,6 @@
 package com.example.enel_bitrix24_integration.controller;
 import com.example.enel_bitrix24_integration.config.EnelProperties;
+import com.example.enel_bitrix24_integration.config.LeadScheduler;
 import com.example.enel_bitrix24_integration.dto.*;
 import com.example.enel_bitrix24_integration.service.BitrixService;
 import com.example.enel_bitrix24_integration.service.BlacklistService;
@@ -27,6 +28,7 @@ public class EnelController {
     private final BlacklistService blacklistService;
     private final BitrixService bitrixService;
     private final EnelProperties enelProperties;
+    private final LeadScheduler leadScheduler;
 
     // Metodo dedicato per la validazione del Bearer token
     private boolean isAuthorized(String authHeader) {
@@ -43,6 +45,7 @@ public class EnelController {
     public ResponseEntity<?> creaContattoLavorato(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
             @RequestBody LeadRequest request) {
+        logger.info("Ricevuta richiesta creaContattoLavorato per lead: {}", request);
         try {
             // Validazione del Bearer token tramite metodo dedicato
             if (!isAuthorized(authHeader)) {
@@ -52,10 +55,13 @@ public class EnelController {
             }
 
             LeadResponse response = bitrixService.invioLavorato(request);
+            logger.info("Invocato bitrixService.invioLavorato, risultato successo: {}", response.isSuccess());
 
             if (response.isSuccess()) {
+                logger.info("creaContattoLavorato eseguito con successo");
                 return ResponseEntity.ok(response);
             } else {
+                logger.info("creaContattoLavorato eseguito con risposta negativa");
                 return ResponseEntity.badRequest().body(response);
             }
 
@@ -66,9 +72,18 @@ public class EnelController {
         }
     }
 
+    //Aggiunta contatto lavorato alla lista per l'invio
+    @PostMapping("/aggiungi")
+    public ResponseEntity<String> aggiungiContatto(@RequestBody LeadRequest request) {
+        logger.info("Aggiunta contatto alla coda di invio schedulato: {}", request);
+        leadScheduler.aggiungiContatto(request);
+        return ResponseEntity.ok("Contatto aggiunto in coda per l'invio schedulato");
+    }
+
     //Richiesta lista lotti da scaricare
     @GetMapping("/ultimi")
     public ResponseEntity<?> getUltimiLotti(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Ricevuta richiesta lista ultimi lotti.");
         // Validazione del Bearer token tramite metodo dedicato
         if (!isAuthorized(authHeader)) {
             logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
@@ -77,7 +92,10 @@ public class EnelController {
         }
 
         List<LottoDTO> lotti = lottoService.verificaLottiDisponibili();
+        logger.info("Numero lotti disponibili da restituire: {}", lotti.size());
+
         if (lotti.isEmpty()) {
+            logger.info("Nessun lotto disponibile da restituire.");
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(lotti);
@@ -88,6 +106,7 @@ public class EnelController {
     public ResponseEntity<?> scaricaJson(
             @PathVariable String idLotto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Ricevuta richiesta scaricaJson per lotto id: {}", idLotto);
         // Validazione del Bearer token tramite metodo dedicato
         if (!isAuthorized(authHeader)) {
             logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
@@ -97,11 +116,13 @@ public class EnelController {
 
         try {
             String json = lottoService.scaricaLottoJson(idLotto);
+            logger.info("scaricaJson completato con successo per lotto id: {}", idLotto);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(json);
         } catch (Exception e) {
             String errMsg = e.getMessage();
+            logger.error("Errore scaricaJson per lotto id {}: {}", idLotto, errMsg);
             if ("Slice Id not found".equals(errMsg)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", errMsg));
@@ -120,6 +141,7 @@ public class EnelController {
     public ResponseEntity<?> scaricaZip(
             @PathVariable String idLotto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Ricevuta richiesta scaricaZip per lotto id: {}", idLotto);
         if (!isAuthorized(authHeader)) {
             logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -128,6 +150,7 @@ public class EnelController {
 
         try {
             byte[] zipData = lottoService.scaricaLottoZip(idLotto);
+            logger.info("scaricaZip completato con successo per lotto id: {}", idLotto);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotto_" + idLotto + ".zip")
@@ -136,6 +159,7 @@ public class EnelController {
 
         } catch (RuntimeException e) {
             String message = e.getMessage();
+            logger.error("Errore runtime download ZIP lotto {}: {}", idLotto, message, e);
             if ("Slice Id not found".equals(message)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ErrorResponse("false", "Slice Id not found"));
@@ -143,7 +167,6 @@ public class EnelController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(new ErrorResponse("false", "Slice Id not available"));
             } else {
-                logger.error("Errore download ZIP lotto {}: {}", idLotto, message, e);
                 return ResponseEntity.internalServerError()
                         .body(new ErrorResponse("false", "Errore download ZIP lotto " + idLotto + ": " + message));
             }
@@ -154,12 +177,11 @@ public class EnelController {
         }
     }
 
-
-
     //Richiesta lista lotti blacklist da scaricare
     @GetMapping("/ultimiBlacklist")
     public ResponseEntity<?> getUltimiLottiBlacklist(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Ricevuta richiesta lista ultimi lotti blacklist.");
         // Validazione del Bearer token tramite metodo dedicato
         if (!isAuthorized(authHeader)) {
             logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
@@ -168,18 +190,21 @@ public class EnelController {
         }
 
         List<LottoBlacklistDTO> lottiB = blacklistService.verificaBlacklistDisponibili();
+        logger.info("Numero lotti blacklist disponibili: {}", lottiB.size());
+
         if (lottiB.isEmpty()) {
+            logger.info("Nessun lotto blacklist disponibile da restituire.");
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(lottiB);
     }
-
 
     // Scarica lotto blacklist ZIP → restituisce il file binario
     @GetMapping("blacklist/{idLotto}/zip")
     public ResponseEntity<?> scaricaZipBlacklist(
             @PathVariable Long idLotto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Ricevuta richiesta scaricaZipBlacklist per lotto blacklist id: {}", idLotto);
         // Validazione del Bearer token tramite metodo dedicato
         if (!isAuthorized(authHeader)) {
             logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
@@ -189,6 +214,7 @@ public class EnelController {
 
         try {
             byte[] zipDataBlacklist = blacklistService.scaricaLottoBlacklistZip(idLotto);
+            logger.info("scaricaZipBlacklist completato con successo per lotto blacklist id: {}", idLotto);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=lotto_blacklist" + idLotto + ".zip")
@@ -197,6 +223,7 @@ public class EnelController {
 
         } catch (RuntimeException e) {
             String message = e.getMessage();
+            logger.error("Errore runtime download ZIP lotto blacklist {}: {}", idLotto, message, e);
             if ("Slice Id not found".equals(message)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ErrorResponse("false", "Slice Id not found"));
@@ -204,7 +231,6 @@ public class EnelController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(new ErrorResponse("false", "Slice Id not available"));
             } else {
-                logger.error("Errore download ZIP lotto blacklist {}: {}", idLotto, message, e);
                 return ResponseEntity.internalServerError()
                         .body(new ErrorResponse("false", "Errore download ZIP lotto blacklist " + idLotto + ": " + message));
             }
@@ -214,13 +240,13 @@ public class EnelController {
                     .body(new ErrorResponse("false", "Errore generico download ZIP lotto blacklist" + idLotto));
         }
     }
-    
 
     //Invia conferma di processamento di lotto di notifica blacklist
     @PostMapping("/{id}/conferma")
     public ResponseEntity<?> confermaLotto(
             @PathVariable("id") long idLotto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Ricevuta richiesta conferma lotto blacklist id: {}", idLotto);
         // Validazione del Bearer token tramite metodo dedicato
         if (!isAuthorized(authHeader)) {
             logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
@@ -230,9 +256,10 @@ public class EnelController {
 
         try {
             blacklistService.confermaLotto(idLotto);
+            logger.info("Conferma lotto blacklist id {} completata con successo", idLotto);
             return ResponseEntity.ok(Map.of("success", true, "message", "Lotto " + idLotto + " scaricato correttamente."));
         } catch (IllegalArgumentException e) {
-            // esempio di messaggio specifico (es. id non valido)
+            logger.warn("Id Lotto Blacklist non valido: {}", idLotto);
             return ResponseEntity.badRequest()
                     .body(Map.of("success", false, "message", "Id Lotto Blacklist non valido"));
         } catch (Exception e) {
