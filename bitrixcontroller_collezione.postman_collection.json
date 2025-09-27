@@ -1,0 +1,229 @@
+{
+  "info": {
+    "name": "BitrixController API Test",
+    "_postman_id": "bitrix-api-test-001",
+    "description": "Collezione per testare tutti gli endpoint del BitrixController",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Add Deal - OK",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"dealField\": \"value\" }"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/add-Deal",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "addDeal"]
+        }
+      }
+    },
+    {
+      "name": "Update Deal - OK",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"dealId\": 123, \"dealField\": \"newValue\" }"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/update-Deal",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "updateDeal"]
+        }
+      }
+    },
+    {
+      "name": "Get Deal by ID - OK",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/deal/123",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "deal", "123"]
+        }
+      }
+    },
+    {
+      "name": "List Deals - OK",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/deal-list",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "deal-list"]
+        }
+      }
+    },
+    {
+      "name": "Delete Deal - OK",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/delete-deal/123",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "delete-deal", "123"]
+        }
+      }
+    },
+    {
+      "name": "Add Contacts Lotto - OK",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"contactField\": \"value\" }"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/idLotto/add-contact",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "idLotto", "add-contact"]
+        }
+      }
+    },
+    {
+      "name": "Update Contact - OK",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"contactId\": 456, \"contactField\": \"newValue\" }"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/update-contact",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "update-contact"]
+        }
+      }
+    },
+    {
+      "name": "Get Contact by ID - OK",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/contact/456",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "contact", "456"]
+        }
+      }
+    },
+    {
+      "name": "List Contacts - OK",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/contact-list",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "contact-list"]
+        }
+      }
+    },
+    {
+      "name": "Delete Contact - OK",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer <VALID_TOKEN>" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/delete-contact/456",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "delete-contact", "456"]
+        }
+      }
+    },
+    {
+      "name": "OAuth Authorize",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/oauth/authorize",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "oauth", "authorize"]
+        }
+      }
+    },
+    {
+      "name": "OAuth Callback",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/enel-leads/oauth/callback",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "oauth", "callback"]
+        }
+      }
+    }
+  ]
+}
+
