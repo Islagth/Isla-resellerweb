@@ -1,6 +1,7 @@
 package com.example.enel_bitrix24_integration;
 
 import com.example.enel_bitrix24_integration.config.EnelProperties;
+import com.example.enel_bitrix24_integration.config.LeadScheduler;
 import com.example.enel_bitrix24_integration.controller.EnelController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,12 +12,16 @@ import com.example.enel_bitrix24_integration.service.LottoService;
 import org.mockito.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.mock.http.server.reactive.MockServerHttpRequest.post;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class EnelControllerTest {
 
@@ -77,6 +82,7 @@ class EnelControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(leadResponse, response.getBody());
     }
+
 
     // Test getUltimiLotti
 
