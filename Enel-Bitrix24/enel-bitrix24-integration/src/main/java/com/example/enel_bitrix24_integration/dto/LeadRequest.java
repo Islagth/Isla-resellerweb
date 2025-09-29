@@ -11,7 +11,7 @@ public class LeadRequest {
     private String workedCode;
     private LocalDateTime worked_Date;
     private LocalDateTime worked_End_Date;
-    private String resultCode;
+    private ResultCode resultCode;
     private String caller;
     private String workedType;
     private Long campaignId;
