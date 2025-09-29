@@ -84,7 +84,7 @@ public class BitrixController {
     }
 
     //Ottieni tutta la lista dei Deal
-    @PostMapping("/deal-list")
+    @GetMapping("/deal-list")
     public ResponseEntity<?> getDealsList(@RequestBody Map<String, Object> body,
                                           @RequestHeader(value = "Authorization", required = false) String authHeader) {
         logger.info("Ricevuta richiesta getDealsList");
@@ -196,7 +196,7 @@ public class BitrixController {
 
 
     //Ottieni lista dei contatti
-    @PostMapping("/contact-list")
+    @GetMapping("/contact-list")
     public ResponseEntity<?> listaContatti(
             @RequestBody Map<String, Object> requestBody,
             @RequestHeader("Authorization") String authHeader) {
