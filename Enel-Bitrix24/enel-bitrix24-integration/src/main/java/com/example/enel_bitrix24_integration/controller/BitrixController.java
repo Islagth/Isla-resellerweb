@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/enel-leads")
+@RequestMapping
 @RequiredArgsConstructor
 public class BitrixController {
 
@@ -38,74 +38,48 @@ public class BitrixController {
     private final BitrixOAuthProperties oAuthProperties;
 
     //Aggiungi Deal
-    @PostMapping("/add-Deal")
+    @PostMapping("/api/enel-leads/add-Deal")
     public ResponseEntity<?> createDeal(@RequestBody DealDTO dealDTO,
-                                        @RequestParam(required = false) Map<String, Object> params,
-                                        @RequestHeader(value = "Authorization", required = false) String authHeader) {
+                                        @RequestParam(required = false) Map<String, Object> params) {
         logger.info("Ricevuta richiesta createDeal con dati: {}", dealDTO);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in createDeal");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
-        String token = extractAccessToken(authHeader);
-        Integer dealId = dealService.addDeal(dealDTO, params, token);
+        Integer dealId = dealService.addDeal(dealDTO, params, null);
         logger.info("Deal creato con ID: {}", dealId);
         return ResponseEntity.ok(Map.of("dealId", dealId));
     }
 
     //Modifica Deal
-    @PutMapping("/update-Deal")
+    @PutMapping("/api/enel-leads/update-Deal")
     public ResponseEntity<?> updateDeal(@RequestBody DealDTO dto,
-                                        @RequestParam(required = false) Map<String, Object> params,
-                                        @RequestHeader(value = "Authorization", required = false) String authHeader) {
+                                        @RequestParam(required = false) Map<String, Object> params) {
         logger.info("Ricevuta richiesta updateDeal per ID: {}", dto.getId());
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in updateDeal");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
-        String token = extractAccessToken(authHeader);
-        boolean success = dealService.updateDeal(dto, params, token);
+        boolean success = dealService.updateDeal(dto, params, null);
         logger.info("Aggiornamento deal {} risultato: {}", dto.getId(), success);
         return ResponseEntity.ok(Map.of("updated", success));
     }
 
     //Cerca Deal per id
-    @GetMapping("deal/{id}")
-    public ResponseEntity<?> getDealById(@PathVariable Integer id,
-                                         @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    @GetMapping
+    public ResponseEntity<?> getDealById(@PathVariable Integer id) {
         logger.info("Ricevuta richiesta getDealById per ID: {}", id);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in getDealById");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
-        String token = extractAccessToken(authHeader);
-        DealDTO dealDTO = dealService.getDealById(id, token);
+        DealDTO dealDTO = dealService.getDealById(id, null);
         return ResponseEntity.ok(dealDTO);
     }
 
     //Ottieni tutta la lista dei Deal
-    @GetMapping("/deal-list")
-    public ResponseEntity<?> getDealsList(@RequestBody Map<String, Object> body,
-                                          @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    @GetMapping
+    public ResponseEntity<?> getDealsList(@RequestBody Map<String, Object> body) {
         logger.info("Ricevuta richiesta getDealsList");
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in getDealsList");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
-        String token = extractAccessToken(authHeader);
-
         List<String> select = (List<String>) body.get("select");
         Map<String, Object> filter = (Map<String, Object>) body.get("filter");
         Map<String, String> order = (Map<String, String>) body.get("order");
         Integer start = (Integer) body.getOrDefault("start", 0);
-
-        List<DealDTO> deals = dealService.getDealsList(select, filter, order, start, token);
+        List<DealDTO> deals = dealService.getDealsList(select, filter, order, start, null);
         logger.info("Recuperati {} deals", deals.size());
         return ResponseEntity.ok(deals);
     }
 
     //Cancella Deal
-    @DeleteMapping("delete-deal/{id}")
+    @DeleteMapping("/api/enel-leads/delete-deal/{id}")
     public ResponseEntity<?> deleteDeal(@PathVariable Integer id,
                                         @RequestHeader(value = "Authorization", required = false) String authHeader) {
         logger.info("Ricevuta richiesta deleteDeal per ID: {}", id);
@@ -121,21 +95,11 @@ public class BitrixController {
     }
 
     //Aggiungi Contatto da lista Json
-    @PostMapping("/{idLotto}/add-contact")
-    public ResponseEntity<?> creaContattiDalLotto(
-            @PathVariable String idLotto,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    @PostMapping("/api/enel-leads/{idLotto}/add-contact")
+    public ResponseEntity<?> creaContattiDalLotto(@PathVariable String idLotto) {
         logger.info("Ricevuta richiesta creaContattiDalLotto per lotto id: {}", idLotto);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in creaContattiDalLotto");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
-
-        String accessToken = extractAccessToken(authHeader);
-
         try {
-            contactService.creaContattiDaLotto(idLotto, accessToken);
+            contactService.creaContattiDaLotto(idLotto, null);
             logger.info("Creazione contatti da lotto {} avviata con successo", idLotto);
             return ResponseEntity.ok(Map.of("success", true, "message", "Creazione contatti avviata con successo"));
         } catch (Exception e) {
@@ -147,23 +111,14 @@ public class BitrixController {
 
 
     //Modifica contatto
-    @PutMapping("/update-contact")
-    public ResponseEntity<?> aggiornaContatto(
-            @RequestParam int id,
-            @RequestBody Map<String, Object> payload,
-            @RequestHeader("Authorization") String authHeader) {
+    @PutMapping("/api/enel-leads/update-contact")
+    public ResponseEntity<?> aggiornaContatto(@RequestParam int id,
+                                              @RequestBody Map<String, Object> payload) {
         logger.info("Ricevuta richiesta aggiornaContatto per id: {}", id);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in aggiornaContatto");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
         try {
-            String token = extractAccessToken(authHeader);
-
             Map<String, Object> fields = (Map<String, Object>) payload.get("fields");
             Map<String, Object> params = (Map<String, Object>) payload.getOrDefault("params", Collections.emptyMap());
-
-            String result = contactService.aggiornaContatto(id, fields, params, token);
+            String result = contactService.aggiornaContatto(id, fields, params, null);
             logger.info("Aggiornamento contatto ID {} risultato: {}", id, result);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -174,18 +129,11 @@ public class BitrixController {
 
 
     //Cerca Contatto tramite Id
-    @GetMapping("contact/{id}")
-    public ResponseEntity<?> getContattoById(
-            @PathVariable int id,
-            @RequestHeader("Authorization") String authHeader) {
+    @GetMapping
+    public ResponseEntity<?> getContattoById(@PathVariable int id) {
         logger.info("Ricevuta richiesta getContattoById per id: {}", id);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in getContattoById");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
         try {
-            String token = extractAccessToken(authHeader);
-            Map<String, Object> contact = contactService.getContattoById(id, token);
+            Map<String, Object> contact = contactService.getContattoById(id, null);
             logger.info("Recuperato contatto ID {}", id);
             return ResponseEntity.ok(contact);
         } catch (Exception e) {
@@ -196,20 +144,15 @@ public class BitrixController {
 
 
     //Ottieni lista dei contatti
-    @GetMapping("/contact-list")
-    public ResponseEntity<?> listaContatti(
-            @RequestBody Map<String, Object> requestBody,
-            @RequestHeader("Authorization") String authHeader) {
+    @GetMapping
+    public ResponseEntity<?> listaContatti(@RequestBody Map<String, Object> requestBody) {
         logger.info("Ricevuta richiesta listaContatti");
         try {
-            String token = extractAccessToken(authHeader);
-
             Map<String, Object> filter = (Map<String, Object>) requestBody.get("filter");
             Map<String, String> order = (Map<String, String>) requestBody.get("order");
             List<String> select = (List<String>) requestBody.get("select");
             Integer start = requestBody.get("start") != null ? (Integer) requestBody.get("start") : null;
-
-            Map<String, Object> result = contactService.listaContatti(filter, order, select, start, token);
+            Map<String, Object> result = contactService.listaContatti(filter, order, select, start, null);
             logger.info("Lista contatti recuperata con successo");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -219,18 +162,11 @@ public class BitrixController {
     }
 
     //Cancellazione contatto
-    @DeleteMapping("delete-contact/{id}")
-    public ResponseEntity<?> eliminaContatto(
-            @PathVariable int id,
-            @RequestHeader("Authorization") String authHeader) {
+    @DeleteMapping("/api/enel-leads/delete-contact/{id}")
+    public ResponseEntity<?> eliminaContatto(@PathVariable int id) {
         logger.info("Ricevuta richiesta eliminaContatto per id: {}", id);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato in eliminaContatto");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "message", "Token non valido o mancante"));
-        }
         try {
-            String token = extractAccessToken(authHeader);
-            boolean deleted = contactService.eliminaContatto(id, token);
+            boolean deleted = contactService.eliminaContatto(id, null);
             logger.info("Eliminazione contatto ID {} risultato: {}", id, deleted);
             if (deleted) {
                 return ResponseEntity.ok("Contatto eliminato con successo.");
@@ -251,7 +187,7 @@ public class BitrixController {
     }
 
 
-    @GetMapping("/oauth/authorize")
+    @GetMapping("/api/enel-leads/oauth/authorize")
     public void redirectToBitrixOAuth(HttpServletResponse response) throws IOException {
         String state = UUID.randomUUID().toString();
         String authUrl = UriComponentsBuilder.fromHttpUrl("https://portal.bitrix24.com/oauth/authorize/")
@@ -265,7 +201,7 @@ public class BitrixController {
         response.sendRedirect(authUrl);
     }
 
-    @GetMapping("/oauth/callback")
+    @GetMapping("/api/enel-leads/oauth/callback")
     public ResponseEntity<?> handleOAuthCallback(@RequestParam String code, @RequestParam String state) {
         logger.info("Ricevuto callback OAuth con code: {} e state: {}", code, state);
         try {

@@ -90,7 +90,7 @@ public class ContactService {
     // ----------------- GET CONTATTO PER ID -----------------
     public Map<String, Object> getContattoById(int contactId, String accessToken) throws Exception {
         logger.info("Recupero contatto per ID: {}", contactId);
-        String url = baseUrl + "/rest/crm.contact.get";
+        String url = baseUrl + "/rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
@@ -103,7 +103,7 @@ public class ContactService {
     // ----------------- LISTA CONTATTO -----------------
     public Map<String, Object> listaContatti(Map<String, Object> filter, Map<String, String> order, List<String> select, Integer start, String accessToken) throws Exception {
         logger.info("Richiesta lista contatti");
-        String url = baseUrl + "/rest/crm.contact.list";
+        String url = baseUrl + "/rest/9/1varqs6u91afcteh/crm.contact.list.json";
 
         Map<String, Object> payload = new HashMap<>();
         if (filter != null) {

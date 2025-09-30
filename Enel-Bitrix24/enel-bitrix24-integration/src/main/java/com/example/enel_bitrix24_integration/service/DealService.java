@@ -26,7 +26,7 @@ public class DealService {
     // ----------------- CREAZIONE DEAL -----------------
     public Integer addDeal(DealDTO dto, Map<String, Object> params, String accessToken) {
         logger.info("Avvio creazione deal con titolo: {}", dto.getTitle());
-        String url = baseUrl + "/rest/1/your_webhook_token/crm.deal.add";
+        String url = baseUrl + "/rest/crm.deal.add";
         Map<String, Object> fields = convertDtoToFields(dto);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -55,7 +55,7 @@ public class DealService {
             throw new IllegalArgumentException("ID del deal deve essere valido per l’update");
         }
         logger.info("Avvio aggiornamento deal ID: {}", dto.getId());
-        String url = baseUrl + "/rest/1/your_webhook_token/crm.deal.update";
+        String url = baseUrl + "/rest/crm.deal.update";
 
         Map<String, Object> fields = convertDtoToFields(dto);
 
@@ -81,7 +81,7 @@ public class DealService {
             throw new IllegalArgumentException("ID del deal deve essere valido e positivo");
         }
         logger.info("Richiesta recupero deal per ID: {}", id);
-        String url = baseUrl + "/rest/1/your_webhook_token/crm.deal.get";
+        String url = baseUrl + "/rest/9/txk5orlo651kxu97/crm.deal.get.json";
 
         Map<String, Object> requestBody = Collections.singletonMap("ID", id);
 
@@ -105,7 +105,7 @@ public class DealService {
     public List<DealDTO> getDealsList(List<String> select, Map<String, Object> filter,
                                       Map<String, String> order, int start, String accessToken) {
         logger.info("Richiesta lista deal con filter: {}, order: {}, start: {}", filter, order, start);
-        String url = baseUrl + "/rest/1/your_webhook_token/crm.deal.list";
+        String url = baseUrl + "/rest/9/9yi2oktsybau3wkn/crm.deal.list.json";
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("select", select != null ? select : Collections.singletonList("*"));
         requestBody.put("filter", filter != null ? filter : Collections.emptyMap());
@@ -137,7 +137,7 @@ public class DealService {
             throw new IllegalArgumentException("ID del deal deve essere valido e positivo");
         }
         logger.info("Avvio cancellazione deal ID: {}", id);
-        String url = baseUrl + "/rest/1/your_webhook_token/crm.deal.delete";
+        String url = baseUrl + "/rest/crm.deal.delete";
 
         Map<String, Object> requestBody = Collections.singletonMap("ID", id);
 

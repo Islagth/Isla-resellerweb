@@ -23,8 +23,8 @@ enel:
 
 bitrix24:
   api:
-    base-url: https://yourdomain.bitrix24.com/rest
-    redirect-uri: https://tuo.dominio/oauth/callback
+    base-url: https://b24-vayzx4.bitrix24.it/
+    redirect-uri: https://b24-vayzx4.bitrix24.it/oauth/callback
     client-id: ${BITRIX_CLIENT_ID}
     client-jwk: ${BITRIX_CLIENT_JWK}
 
