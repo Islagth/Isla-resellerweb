@@ -8,6 +8,7 @@ import com.example.enel_bitrix24_integration.service.LottoService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,51 +31,50 @@ public class EnelController {
     private final EnelProperties enelProperties;
     private final LeadScheduler leadScheduler;
 
-    // Metodo dedicato per la validazione del Bearer token
-    private boolean isAuthorized(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return false;
-        }
-        String token = authHeader.substring(7);
-        // Verifica token in modo robusto (es. confronto con token configurato)
-        return token.equals(enelProperties.getClientJwt());
+    @Value("${webhook.api-key}")
+    private String expectedApiKey;
+
+    private boolean isAuthorized(String authHeader, String apiKey) {
+        boolean validApiKey = apiKey != null && apiKey.equals(expectedApiKey);
+        boolean validBearer = authHeader != null && authHeader.startsWith("Bearer ") && authHeader.substring(7).equals(enelProperties.getClientJwt());
+        return validApiKey || validBearer;
     }
+
 
     //Crea contatto lavorato
     @PostMapping
     public ResponseEntity<?> creaContattoLavorato(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey,
             @RequestBody LeadRequest request) {
         logger.info("Ricevuta richiesta creaContattoLavorato per lead: {}", request);
+        if (!isAuthorized(authHeader, apiKey)) {
+            logger.warn("Accesso non autorizzato: token o API-Key mancanti/non validi.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi o mancanti"));
+        }
         try {
-            // Validazione del Bearer token tramite metodo dedicato
-            if (!isAuthorized(authHeader)) {
-                logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
-            }
-
             LeadResponse response = bitrixService.invioLavorato(request);
             logger.info("Invocato bitrixService.invioLavorato, risultato successo: {}", response.isSuccess());
-
             if (response.isSuccess()) {
-                logger.info("creaContattoLavorato eseguito con successo");
                 return ResponseEntity.ok(response);
             } else {
-                logger.info("creaContattoLavorato eseguito con risposta negativa");
                 return ResponseEntity.badRequest().body(response);
             }
-
         } catch (Exception e) {
-            logger.error("Errore durante la chiamata al servizio creaContattoLavorato", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("INTERNAL_ERROR", e.getMessage()));
+            logger.error("Errore durante la chiamata creaContattoLavorato", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("INTERNAL_ERROR", e.getMessage()));
         }
     }
 
     //Aggiunta contatto lavorato alla lista per l'invio
     @PostMapping("/aggiungi")
-    public ResponseEntity<String> aggiungiContatto(@RequestBody LeadRequest request) {
+    public ResponseEntity<String> aggiungiContatto(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey,
+            @RequestBody LeadRequest request) {
+        if (!isAuthorized(authHeader, apiKey)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Accesso non autorizzato.");
+        }
         logger.info("Aggiunta contatto alla coda di invio schedulato: {}", request);
         leadScheduler.aggiungiContatto(request);
         return ResponseEntity.ok("Contatto aggiunto in coda per l'invio schedulato");
@@ -82,36 +82,33 @@ public class EnelController {
 
     //Richiesta lista lotti da scaricare
     @GetMapping("/ultimi")
-    public ResponseEntity<?> getUltimiLotti(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        logger.info("Ricevuta richiesta lista ultimi lotti.");
-        // Validazione del Bearer token tramite metodo dedicato
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+    public ResponseEntity<?> getUltimiLotti(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
+        if (!isAuthorized(authHeader, apiKey)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi"));
         }
-
         List<LottoDTO> lotti = lottoService.verificaLottiDisponibili();
-        logger.info("Numero lotti disponibili da restituire: {}", lotti.size());
-
         if (lotti.isEmpty()) {
-            logger.info("Nessun lotto disponibile da restituire.");
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(lotti);
     }
 
+
     // Scarica lotto JSON → restituisce il contenuto
     @GetMapping("/{idLotto}/json")
     public ResponseEntity<?> scaricaJson(
             @PathVariable String idLotto,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
+
         logger.info("Ricevuta richiesta scaricaJson per lotto id: {}", idLotto);
-        // Validazione del Bearer token tramite metodo dedicato
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+
+        if (!isAuthorized(authHeader, apiKey)) {
+            logger.warn("Accesso non autorizzato: token o API-Key mancanti/non validi.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi o mancanti"));
         }
 
         try {
@@ -136,16 +133,20 @@ public class EnelController {
         }
     }
 
+
+
     // Scarica lotto ZIP → restituisce il file binario
     @GetMapping("/{idLotto}/zip")
     public ResponseEntity<?> scaricaZip(
             @PathVariable String idLotto,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
         logger.info("Ricevuta richiesta scaricaZip per lotto id: {}", idLotto);
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+
+        if (!isAuthorized(authHeader, apiKey)) {
+            logger.warn("Accesso non autorizzato: token o API-Key mancanti/non validi.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi o mancanti"));
         }
 
         try {
@@ -176,17 +177,17 @@ public class EnelController {
                     .body(new ErrorResponse("false", "Errore generico download ZIP lotto " + idLotto));
         }
     }
-
     //Richiesta lista lotti blacklist da scaricare
     @GetMapping("/ultimiBlacklist")
     public ResponseEntity<?> getUltimiLottiBlacklist(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
         logger.info("Ricevuta richiesta lista ultimi lotti blacklist.");
-        // Validazione del Bearer token tramite metodo dedicato
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+
+        if (!isAuthorized(authHeader, apiKey)) {
+            logger.warn("Accesso non autorizzato: token o API-Key mancanti/non validi.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi o mancanti"));
         }
 
         List<LottoBlacklistDTO> lottiB = blacklistService.verificaBlacklistDisponibili();
@@ -203,13 +204,14 @@ public class EnelController {
     @GetMapping("blacklist/{idLotto}/zip")
     public ResponseEntity<?> scaricaZipBlacklist(
             @PathVariable Long idLotto,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
         logger.info("Ricevuta richiesta scaricaZipBlacklist per lotto blacklist id: {}", idLotto);
-        // Validazione del Bearer token tramite metodo dedicato
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+
+        if (!isAuthorized(authHeader, apiKey)) {
+            logger.warn("Accesso non autorizzato: token o API-Key mancanti/non validi.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi o mancanti"));
         }
 
         try {
@@ -245,13 +247,14 @@ public class EnelController {
     @PostMapping("/{id}/conferma")
     public ResponseEntity<?> confermaLotto(
             @PathVariable("id") long idLotto,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
         logger.info("Ricevuta richiesta conferma lotto blacklist id: {}", idLotto);
-        // Validazione del Bearer token tramite metodo dedicato
-        if (!isAuthorized(authHeader)) {
-            logger.warn("Tentativo di accesso non autorizzato: token mancante o non valido.");
+
+        if (!isAuthorized(authHeader, apiKey)) {
+            logger.warn("Accesso non autorizzato: token o API-Key mancanti/non validi.");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("UNAUTHORIZED", "Token non valido o mancante"));
+                    .body(new ErrorResponse("UNAUTHORIZED", "Token o API-Key non validi o mancanti"));
         }
 
         try {
@@ -268,6 +271,5 @@ public class EnelController {
                     .body(Map.of("success", false, "message", "Errore durante la conferma del lotto " + idLotto + ": " + e.getMessage()));
         }
     }
-
 
 }

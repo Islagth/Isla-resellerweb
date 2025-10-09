@@ -2,18 +2,18 @@ package com.example.enel_bitrix24_integration.service;
 
 import com.example.enel_bitrix24_integration.dto.LottoBlacklistDTO;
 import com.example.enel_bitrix24_integration.dto.LottoDTO;
+import com.example.enel_bitrix24_integration.security.TokenService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpMethod;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,27 +24,44 @@ public class BlacklistService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final TokenService tokenService;
 
     @Value("${enel.api.base-url}")
     private String baseUrl; // preso da application.yml
 
-    // Metodo per ottenere gli ultimi lotti (usato dall'endpoint REST)
+    @Value("${webhook.api-key}")
+    private String apiKey;
+
     @Getter
     private List<LottoBlacklistDTO> ultimiLottiBlacklist = new ArrayList<>();
 
     private static final Logger logger = LoggerFactory.getLogger(BlacklistService.class);
 
-    public BlacklistService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public BlacklistService(RestTemplate restTemplate, ObjectMapper objectMapper, TokenService tokenService) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.tokenService = tokenService;
     }
 
+    private HttpHeaders getBearerAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(tokenService.getAccessToken());
+        return headers;
+    }
+
+    private HttpHeaders getApiKeyHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("api-auth-token", apiKey);
+        return headers;
+    }
 
     @Scheduled(fixedRate = 60000)
     public List<LottoBlacklistDTO> verificaBlacklistDisponibili() {
         try {
             String url = baseUrl + "/partner-api/v5/blacklist";
-            ResponseEntity<String> response = restTemplate.getForEntity(new URI(url), String.class);
+            HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
+
+            ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 ultimiLottiBlacklist = Arrays.asList(objectMapper.readValue(response.getBody(), LottoBlacklistDTO[].class));
@@ -60,7 +77,9 @@ public class BlacklistService {
 
     public byte[] scaricaLottoBlacklistZip(long idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/blacklist/" + idLotto + ".zip";
-        ResponseEntity<byte[]> response = restTemplate.exchange(new URI(url), HttpMethod.GET, null, byte[].class);
+        HttpEntity<String> entity = new HttpEntity<>(getApiKeyHeaders());
+
+        ResponseEntity<byte[]> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, byte[].class);
 
         if (response.getStatusCode() == HttpStatus.OK) {
             byte[] zipDataBlacklist = response.getBody();
@@ -85,7 +104,9 @@ public class BlacklistService {
 
     public void confermaLotto(long idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/blacklist/" + idLotto;
-        ResponseEntity<String> response = restTemplate.postForEntity(new URI(url), null, String.class);
+        HttpEntity<String> entity = new HttpEntity<>(getApiKeyHeaders());
+
+        ResponseEntity<String> response = restTemplate.postForEntity(new URI(url), entity, String.class);
 
         if (response.getStatusCode().is2xxSuccessful()) {
             ObjectMapper mapper = new ObjectMapper();
@@ -103,6 +124,5 @@ public class BlacklistService {
             throw new RuntimeException("Errore conferma lotto, status: " + response.getStatusCode());
         }
     }
-
-
 }
+

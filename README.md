@@ -138,24 +138,24 @@ Base URL: `/api/enel-leads`
 |-------------|--------------------------------------------|------------------------------------------------|
 | POST        | /api/enel-leads/add-Deal                    | Aggiunge un nuovo Deal                           |
 | PUT         | /api/enel-leads/update-Deal                 | Aggiorna un Deal esistente                       |
-| GET         | /api/enel-leads/deal/{id}                   | Recupera un Deal per ID                           |
-| POST        | /api/enel-leads/deal-list                   | Ottiene la lista di Deal                          |
+| GET         | /rest/9/txk5orlo651kxu97/crm.deal.get.json  | Recupera un Deal per ID                           |
+| POST        | /rest/9/9yi2oktsybau3wkn/crm.deal.list.json | Ottiene la lista di Deal                          |
 | DELETE      | /api/enel-leads/delete-deal/{id}            | Elimina un Deal per ID                            |
-| POST        | /api/enel-leads/idLotto/add-contact          | Aggiunge contatti da JSON                         |
-| PUT         | /api/enel-leads/update-contact               | Aggiorna un contatto                              |
-| GET         | /api/enel-leads/contact/{id}                 | Recupera contatto per ID                          |
-| POST        | /api/enel-leads/contact-list                 | Ottiene lista contatti                            |
-| DELETE      | /api/enel-leads/delete-contact/{id}          | Elimina contatto per ID                           |
-| GET         | /api/enel-leads/oauth/authorize               | Avvia autorizzazione OAuth Bitrix                 |
-| GET         | /api/enel-leads/oauth/callback                | Gestisce callback OAuth                            |
-| POST        | /apienel-leads/creaContattoLavorato           | Crea un nuovo contatto lavorato                    |
-| POST        | /apienel-leads/aggiungi                        | Aggiunge contatto per invio schedulato             |
-| GET         | /apienel-leads/ultimi                          | Lista ultimi lotti disponibili                      |
-| GET         | /apienel-leads/idLotto/json                    | Scarica lotto in formato JSON                       |
-| GET         | /apienel-leads/idLotto/zip                     | Scarica lotto in formato ZIP (file binario)        |
-| GET         | /apienel-leads/ultimiBlacklist                  | Lista ultimi lotti blacklist disponibili            |
-| GET         | /apienel-leads/blacklist/idLotto/zip           | Scarica lotto blacklist in formato ZIP             |
-| POST        | /apienel-leads/idconferma/{id}                  | Conferma processamento lotto blacklist             |
+| POST        | /api/enel-leads/idLotto/add-contact         | Aggiunge contatti da JSON                         |
+| PUT         | /api/enel-leads/update-contact              | Aggiorna un contatto                              |
+| GET         | /rest/9/03w7isr7xmjog2c6/crm.contact.get.json | Recupera contatto per ID                          |
+| POST        | /rest/9/1varqs6u91afcteh/crm.contact.list.json | Ottiene lista contatti                            |
+| DELETE      | /api/enel-leads/delete-contact/{id}         | Elimina contatto per ID                           |
+| GET         | /api/enel-leads/oauth/authorize             | Avvia autorizzazione OAuth Bitrix                 |
+| GET         | /api/enel-leads/oauth/callback              | Gestisce callback OAuth                            |
+| POST        | /apienel-leads/creaContattoLavorato         | Crea un nuovo contatto lavorato                    |
+| POST        | /apienel-leads/aggiungi                     | Aggiunge contatto per invio schedulato             |
+| GET         | /apienel-leads/ultimi                       | Lista ultimi lotti disponibili                      |
+| GET         | /apienel-leads/idLotto/json                 | Scarica lotto in formato JSON                       |
+| GET         | /apienel-leads/idLotto/zip                  | Scarica lotto in formato ZIP (file binario)        |
+| GET         | /apienel-leads/ultimiBlacklist              | Lista ultimi lotti blacklist disponibili            |
+| GET         | /apienel-leads/blacklist/idLotto/zip        | Scarica lotto blacklist in formato ZIP             |
+| POST        | /apienel-leads/idconferma/{id}              | Conferma processamento lotto blacklist             |
 
 
 ---

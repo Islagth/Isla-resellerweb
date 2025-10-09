@@ -18,7 +18,7 @@ public class EnelClient {
     public EnelClient(TokenService tokenService) {
         this.tokenService = tokenService;
         this.webClient = WebClient.builder()
-                .baseUrl("https://api.enel.com/v1/") // URL base per tutte le chiamate API
+                .baseUrl("https://enel.in-voice.it") // URL base per tutte le chiamate API
                 .build();
     }
 

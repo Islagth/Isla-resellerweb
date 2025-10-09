@@ -2,6 +2,7 @@ package com.example.enel_bitrix24_integration.service;
 
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
 import com.example.enel_bitrix24_integration.dto.LeadResponse;
+import com.example.enel_bitrix24_integration.security.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,21 +20,36 @@ import java.util.List;
 public class BitrixService {
 
     private final RestTemplate restTemplate;
-
     private static final Logger logger = LoggerFactory.getLogger(BitrixService.class);
-
 
     @Value("${enel.api.base-url}")
     private String baseUrl; // preso da application.yml
 
-    public BitrixService() {
+    @Value("${webhook.api-key}")
+    private String apiKey;
+
+    private final TokenService tokenService;
+
+    public BitrixService(TokenService tokenService) {
         this.restTemplate = new RestTemplate();
+        this.tokenService = tokenService;
     }
 
+    private HttpHeaders getBearerAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(tokenService.getAccessToken());
+        return headers;
+    }
+
+    private HttpHeaders getApiKeyHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("api-auth-token", apiKey);
+        return headers;
+    }
 
     public LeadResponse invioLavorato(LeadRequest request) {
         String url = baseUrl + "/partner-api/v5/workedcontact";
-        HttpHeaders headers = new HttpHeaders();
+        HttpHeaders headers = getBearerAuthHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
 
@@ -75,7 +91,4 @@ public class BitrixService {
         logger.error("Errore imprevisto nel retry invio lavorato");
         return errorResponse;
     }
-
-
-
 }

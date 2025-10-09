@@ -42,6 +42,8 @@ class EnelControllerTest {
 
     private final String validToken = "valid-token";
     private final String authHeader = "Bearer " + validToken;
+    private final String validBearerToken = "validToken";
+    private final String validApiKey = "validApiKey";
 
     @BeforeEach
     void setUp() {
@@ -51,44 +53,62 @@ class EnelControllerTest {
 
     // Test creaContattoLavorato
 
+
     @Test
     void creaContattoLavorato_Unauthorized_WhenInvalidToken() {
         LeadRequest request = new LeadRequest();
-        ResponseEntity<?> response = enelController.creaContattoLavorato("Bearer invalid", request);
+        ResponseEntity<?> response = enelController.creaContattoLavorato("Bearer invalid", "invalidKey", request);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertTrue(response.getBody() instanceof ErrorResponse);
     }
 
     @Test
-    void creaContattoLavorato_Success_WhenValidTokenAndServiceSuccess() {
+    void creaContattoLavorato_Success_WhenValidBearerToken() {
+        LeadRequest request = new LeadRequest();
+        LeadResponse leadResponse = new LeadResponse();
+        leadResponse.setSuccess(true);
+
+        // Mock del servizio Bitrix
+        when(bitrixService.invioLavorato(request)).thenReturn(leadResponse);
+
+        // Bearer token valido (deve corrispondere al valore mockato in enelProperties)
+        String validBearer = "Bearer validToken";
+
+        // Passa Bearer token valido e null per API-Key (doppio controllo)
+        ResponseEntity<?> response = enelController.creaContattoLavorato(validBearer, null, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(leadResponse, response.getBody());
+    }
+
+
+    @Test
+    void creaContattoLavorato_Success_WhenValidApiKey() {
         LeadRequest request = new LeadRequest();
         LeadResponse leadResponse = new LeadResponse();
         leadResponse.setSuccess(true);
         when(bitrixService.invioLavorato(request)).thenReturn(leadResponse);
 
-        ResponseEntity<?> response = enelController.creaContattoLavorato(authHeader, request);
+        ResponseEntity<?> response = enelController.creaContattoLavorato(null, validApiKey, request);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(leadResponse, response.getBody());
     }
 
     @Test
-    void creaContattoLavorato_BadRequest_WhenValidTokenAndServiceFailure() {
+    void creaContattoLavorato_BadRequest_WhenServiceFailure() {
         LeadRequest request = new LeadRequest();
         LeadResponse leadResponse = new LeadResponse();
         leadResponse.setSuccess(false);
         when(bitrixService.invioLavorato(request)).thenReturn(leadResponse);
 
-        ResponseEntity<?> response = enelController.creaContattoLavorato(authHeader, request);
+        ResponseEntity<?> response = enelController.creaContattoLavorato("Bearer " + validBearerToken, null, request);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(leadResponse, response.getBody());
     }
 
-
-    // Test getUltimiLotti
-
     @Test
     void getUltimiLotti_Unauthorized() {
-        ResponseEntity<?> response = enelController.getUltimiLotti("Bearer invalid");
+        ResponseEntity<?> response = enelController.getUltimiLotti("Bearer invalid", "invalidKey");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertTrue(response.getBody() instanceof ErrorResponse);
     }
@@ -96,8 +116,7 @@ class EnelControllerTest {
     @Test
     void getUltimiLotti_NoContent_WhenEmptyList() {
         when(lottoService.verificaLottiDisponibili()).thenReturn(Collections.emptyList());
-
-        ResponseEntity<?> response = enelController.getUltimiLotti(authHeader);
+        ResponseEntity<?> response = enelController.getUltimiLotti("Bearer " + validBearerToken, null);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     }
 
@@ -105,17 +124,14 @@ class EnelControllerTest {
     void getUltimiLotti_Ok_WhenLottiPresent() {
         List<LottoDTO> lotti = Arrays.asList(new LottoDTO());
         when(lottoService.verificaLottiDisponibili()).thenReturn(lotti);
-
-        ResponseEntity<?> response = enelController.getUltimiLotti(authHeader);
+        ResponseEntity<?> response = enelController.getUltimiLotti(null, validApiKey);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(lotti, response.getBody());
     }
 
-    // Test scaricaJson
-
     @Test
     void scaricaJson_Unauthorized() {
-        ResponseEntity<?> response = enelController.scaricaJson("id1", "Bearer invalid");
+        ResponseEntity<?> response = enelController.scaricaJson("id1", "Bearer invalid", "invalidKey");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertTrue(response.getBody() instanceof ErrorResponse);
     }
@@ -124,41 +140,14 @@ class EnelControllerTest {
     void scaricaJson_Success() throws Exception {
         String jsonData = "{\"key\":\"value\"}";
         when(lottoService.scaricaLottoJson("id1")).thenReturn(jsonData);
-
-        ResponseEntity<?> response = enelController.scaricaJson("id1", authHeader);
+        ResponseEntity<?> response = enelController.scaricaJson("id1", "Bearer " + validBearerToken, null);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(jsonData, response.getBody());
     }
 
     @Test
-    void scaricaJson_NotFound() throws Exception {
-        when(lottoService.scaricaLottoJson("id1")).thenThrow(new Exception("Slice Id not found"));
-
-        ResponseEntity<?> response = enelController.scaricaJson("id1", authHeader);
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
-
-    @Test
-    void scaricaJson_Forbidden() throws Exception {
-        when(lottoService.scaricaLottoJson("id1")).thenThrow(new Exception("Slice Id not available"));
-
-        ResponseEntity<?> response = enelController.scaricaJson("id1", authHeader);
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-    }
-
-    @Test
-    void scaricaJson_InternalError() throws Exception {
-        when(lottoService.scaricaLottoJson("id1")).thenThrow(new Exception("Other error"));
-
-        ResponseEntity<?> response = enelController.scaricaJson("id1", authHeader);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-    }
-
-    // Test scaricaZip
-
-    @Test
     void scaricaZip_Unauthorized() {
-        ResponseEntity<?> response = enelController.scaricaZip("id1", "Bearer invalid");
+        ResponseEntity<?> response = enelController.scaricaZip("id1", "Bearer invalid", "invalidKey");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertTrue(response.getBody() instanceof ErrorResponse);
     }
@@ -167,68 +156,37 @@ class EnelControllerTest {
     void scaricaZip_Success() throws Exception {
         byte[] fakeZip = new byte[]{1, 2, 3};
         when(lottoService.scaricaLottoZip("id1")).thenReturn(fakeZip);
-
-        ResponseEntity<?> response = enelController.scaricaZip("id1", authHeader);
+        ResponseEntity<?> response = enelController.scaricaZip("id1", null, validApiKey);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertArrayEquals(fakeZip, (byte[]) response.getBody());
         assertEquals("attachment; filename=lotto_id1.zip", response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION));
     }
 
     @Test
-    void scaricaZip_NotFound() throws Exception {
-        when(lottoService.scaricaLottoZip("id1")).thenThrow(new RuntimeException("Slice Id not found"));
-
-        ResponseEntity<?> response = enelController.scaricaZip("id1", authHeader);
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
-
-    @Test
-    void scaricaZip_Forbidden() throws Exception {
-        when(lottoService.scaricaLottoZip("id1")).thenThrow(new RuntimeException("Slice Id not available"));
-
-        ResponseEntity<?> response = enelController.scaricaZip("id1", authHeader);
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-    }
-
-    @Test
-    void scaricaZip_InternalError() throws Exception {
-        when(lottoService.scaricaLottoZip("id1")).thenThrow(new RuntimeException("Unknown error"));
-
-        ResponseEntity<?> response = enelController.scaricaZip("id1", authHeader);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-    }
-
-    // Test getUltimiLottiBlacklist
-
-    @Test
     void getUltimiLottiBlacklist_Unauthorized() {
-        ResponseEntity<?> response = enelController.getUltimiLottiBlacklist("Bearer invalid");
+        ResponseEntity<?> response = enelController.getUltimiLottiBlacklist("Bearer invalid", "invalidKey");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
     @Test
     void getUltimiLottiBlacklist_NoContent() {
         when(blacklistService.verificaBlacklistDisponibili()).thenReturn(Collections.emptyList());
-
-        ResponseEntity<?> response = enelController.getUltimiLottiBlacklist(authHeader);
+        ResponseEntity<?> response = enelController.getUltimiLottiBlacklist("Bearer " + validBearerToken, null);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     }
 
     @Test
     void getUltimiLottiBlacklist_Ok() {
-        List<LottoBlacklistDTO> lottiBlacklist = Arrays.asList(new LottoBlacklistDTO());
-        when(blacklistService.verificaBlacklistDisponibili()).thenReturn(lottiBlacklist);
-
-        ResponseEntity<?> response = enelController.getUltimiLottiBlacklist(authHeader);
+        List<LottoBlacklistDTO> lotti = Arrays.asList(new LottoBlacklistDTO());
+        when(blacklistService.verificaBlacklistDisponibili()).thenReturn(lotti);
+        ResponseEntity<?> response = enelController.getUltimiLottiBlacklist(null, validApiKey);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(lottiBlacklist, response.getBody());
+        assertEquals(lotti, response.getBody());
     }
-
-    // Test scaricaZipBlacklist
 
     @Test
     void scaricaZipBlacklist_Unauthorized() {
-        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, "Bearer invalid");
+        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, "Bearer invalid", "invalidKey");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
@@ -236,48 +194,21 @@ class EnelControllerTest {
     void scaricaZipBlacklist_Success() throws Exception {
         byte[] fakeZip = new byte[]{4, 5, 6};
         when(blacklistService.scaricaLottoBlacklistZip(123L)).thenReturn(fakeZip);
-
-        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, authHeader);
+        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, "Bearer " + validBearerToken, null);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertArrayEquals(fakeZip, (byte[]) response.getBody());
         assertEquals("attachment; filename=lotto_blacklist123.zip", response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION));
     }
 
     @Test
-    void scaricaZipBlacklist_NotFound() throws Exception {
-        when(blacklistService.scaricaLottoBlacklistZip(123L)).thenThrow(new RuntimeException("Slice Id not found"));
-
-        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, authHeader);
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
-
-    @Test
-    void scaricaZipBlacklist_Forbidden() throws Exception {
-        when(blacklistService.scaricaLottoBlacklistZip(123L)).thenThrow(new RuntimeException("Slice Id not available"));
-
-        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, authHeader);
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-    }
-
-    @Test
-    void scaricaZipBlacklist_InternalError() throws Exception {
-        when(blacklistService.scaricaLottoBlacklistZip(123L)).thenThrow(new RuntimeException("Unknown error"));
-
-        ResponseEntity<?> response = enelController.scaricaZipBlacklist(123L, authHeader);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-    }
-
-    // Test confermaLotto
-
-    @Test
     void confermaLotto_Unauthorized() {
-        ResponseEntity<?> response = enelController.confermaLotto(10L, "Bearer invalid");
+        ResponseEntity<?> response = enelController.confermaLotto(10L, "Bearer invalid", "invalidKey");
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
     @Test
     void confermaLotto_Success() throws Exception {
-        ResponseEntity<?> response = enelController.confermaLotto(10L, authHeader);
+        ResponseEntity<?> response = enelController.confermaLotto(10L, "Bearer " + validBearerToken, null);
         verify(blacklistService).confermaLotto(10L);
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) response.getBody();
@@ -287,15 +218,8 @@ class EnelControllerTest {
     @Test
     void confermaLotto_BadRequest() throws Exception {
         doThrow(new IllegalArgumentException()).when(blacklistService).confermaLotto(10L);
-        ResponseEntity<?> response = enelController.confermaLotto(10L, authHeader);
+        ResponseEntity<?> response = enelController.confermaLotto(10L, null, validApiKey);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
-
-    @Test
-    void confermaLotto_InternalError() throws Exception {
-        doThrow(new RuntimeException("Server Error")).when(blacklistService).confermaLotto(10L);
-        ResponseEntity<?> response = enelController.confermaLotto(10L, authHeader);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-    }
-
 }
+

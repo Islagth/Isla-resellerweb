@@ -21,6 +21,9 @@ enel:
           "kid": "my-key-id"
         }
 
+webhook:
+  api-key: 8lqZR9UC9YyjGtjll2Ss2-7hOqJbpBqsf7buG9ubyBs
+
 bitrix24:
   api:
     base-url: https://b24-vayzx4.bitrix24.it/
