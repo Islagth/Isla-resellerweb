@@ -130,7 +130,7 @@ public class BitrixController {
 
 
     //Cerca Contatto tramite Id
-    @GetMapping
+    @GetMapping("/contatto") 
     public ResponseEntity<?> getContattoById(@PathVariable int id) {
         logger.info("Ricevuta richiesta getContattoById per id: {}", id);
         try {
@@ -145,7 +145,7 @@ public class BitrixController {
 
 
     //Ottieni lista dei contatti
-    @GetMapping
+    @GetMapping("/contatti") 
     public ResponseEntity<?> listaContatti(@RequestBody Map<String, Object> requestBody) {
         logger.info("Ricevuta richiesta listaContatti");
         try {
