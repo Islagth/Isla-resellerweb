@@ -4,20 +4,20 @@ enel:
     auth-url: https://enel.in-voice.it/oauth2/token
     client-id: 768c8279-a1a6-4ac3-83a2-792e97ee6303
     client-jwk: |
-  {
-      "kty": "RSA",
-      "use": "sig",
-      "kid": "95fba2ed-75b0-49ec-bc46-79371e6ffa0d",
-      "alg": "RS256",
-      "n": "piNu6khl5d3IG00H_Ndam-UiXb6UAmBZXalMGvbuBiHM3s5Gr2QTEbwgUEksWQmE1QCsQWhGskwEIksWkVXRbW2WpAtXn6doqcESqqQqlKnIcTIRv6LpYXpViF1CG_d_xzsFUifT4kmLX3QRUeIB3fR8CV4nzqjMGqv9TWfyHm3_PgB8OgRdqKz4GT2UD5nm2X1LgsYfHZCGWQRDban9Ihi4yCLZ5HqDLGXXuwoEY9qTz852wPlYQcY2JlX-rdOGg7GYG-EepELXLV_G2hihXn4SA5p5uwRw7VkRBaHwo10O-_SMnYe_8MBGWkXm8m1wkpkzz4Ut1MUqH-NAv6TfDQ",
-      "e": "AQAB",
-      "d": "E0vySgv2qehEoccksl1hDNJkV3cXQd9nAdX0HP2pT9UFMqvK0fxRqrGrHyggmobcgtD9MOunqnXh1QnbqS3KkWc1JACdQNH0-iKOxHsk5veBbIRgQ13stYG8BYavcwggM0fLqmst1Q6tvXyBtn0Fsn3_GidxgDNi4YYweZklKht0rZD-e5DyP_dycr-ewqvadCU3sk1N7zLht7aGnH1Cm14DtIVogrJRXYPa2MDlc-kOTJI7TsMO7KQPZvRLysBku_kZ6PgFDj8JvttX7H4s63F-Oez7ZfChvTdTUwGqUcGz93b635QHqFJDDmy8xy7SNjQ1QrCpkcQzXdNaoHrXkQ",
-      "p": "zyCeSTwUfp6MEJU-CXlHS32ocRfAQRn1yAja8ersRMTQCskazwc-aPxYJUy-nf7XSedf01mHPFfzh9eyWVCGzXeF_XNhSTo_X4dbNU8IE2aeDUnSVTLZ_lxll_Eahf-NzHrD534bNnZ8eikgam1aVxI88ESljd_fL1IgqorkqO8",
-      "q": "zVbnYHE-X1hdW_Cf1_8HgSBh-YJlgZQw14Q208NzoKq_w9ai-touHBOguFRXB4cZAeH1CEOVKceNqxybNoxgg-XnVkALIgRPVuU1LEB3r_LRB7Rtbb_boILsuoPhxbt8M0Oc_jn2UNS8N8nWrpDKrbZ-DCfMg32EAf_7EmCw38M",
-      "dp": "Ch96_PNNwR54k_rnTEk8HclnaReTEtt08rDUGoyzvWytCknn4IRnHXRvzmrgyhIBbaA8Q7UVcfKOeW4mTk0sOXCFAO0ZrR2GqWGRKJrTNzeFs_qOqBFTLCZR5Moo1LG3uW2qk27LX68MyF-oMOtlReojRk7klHmDi-mEpTEimcs",
-      "dq": "tnH-xywXVTP4T5ZvD8Wjb1HMe5smgYmgE_1_kYxaEmlkVadBzE1LJtsxtFYLtb6Ns6SGyL7zq9mIwH58Um1L3CXL9FCXE7RsojKpmhX1wjmnDId9q0QK6oUpvVcspTm-UvZCaYgqmQtL6O3Hd_difhJl0HsUNciyH-zHsj6DKW0",
-      "qi": "U4uXot1mm9mdDTuL5bzYeQbVhe52KHLmpTBR5Y_DyKizJq2ZHc6qR-pRxrvyTqwKQ-gxx7uCaJ9mLOCl3nQwOsi_0fnv8rcKrR8AqhKGS9_3vRVUimBYlAstsAMHEh7N5B60MzMbpuzYAs_jNsSfl9-hMQLS-1oOkKLbnhnC5WY"
-  }
+      {
+        "kty": "RSA",
+        "use": "sig",
+        "kid": "95fba2ed-75b0-49ec-bc46-79371e6ffa0d",
+        "alg": "RS256",
+        "n": "piNu6khl5d3IG00H_Ndam-UiXb6UAmBZXalMGvbuBiHM3s5Gr2QTEbwgUEksWQmE1QCsQWhGskwEIksWkVXRbW2WpAtXn6doqcESqqQqlKnIcTIRv6LpYXpViF1CG_d_xzsFUifT4kmLX3QRUeIB3fR8CV4nzqjMGqv9TWfyHm3_PgB8OgRdqKz4GT2UD5nm2X1LgsYfHZCGWQRDban9Ihi4yCLZ5HqDLGXXuwoEY9qTz852wPlYQcY2JlX-rdOGg7GYG-EepELXLV_G2hihXn4SA5p5uwRw7VkRBaHwo10O-_SMnYe_8MBGWkXm8m1wkpkzz4Ut1MUqH-NAv6TfDQ",
+        "e": "AQAB",
+        "d": "E0vySgv2qehEoccksl1hDNJkV3cXQd9nAdX0HP2pT9UFMqvK0fxRqrGrHyggmobcgtD9MOunqnXh1QnbqS3KkWc1JACdQNH0-iKOxHsk5veBbIRgQ13stYG8BYavcwggM0fLqmst1Q6tvXyBtn0Fsn3_GidxgDNi4YYweZklKht0rZD-e5DyP_dycr-ewqvadCU3sk1N7zLht7aGnH1Cm14DtIVogrJRXYPa2MDlc-kOTJI7TsMO7KQPZvRLysBku_kZ6PgFDj8JvttX7H4s63F-Oez7ZfChvTdTUwGqUcGz93b635QHqFJDDmy8xy7SNjQ1QrCpkcQzXdNaoHrXkQ",
+        "p": "zyCeSTwUfp6MEJU-CXlHS32ocRfAQRn1yAja8ersRMTQCskazwc-aPxYJUy-nf7XSedf01mHPFfzh9eyWVCGzXeF_XNhSTo_X4dbNU8IE2aeDUnSVTLZ_lxll_Eahf-NzHrD534bNnZ8eikgam1aVxI88ESljd_fL1IgqorkqO8",
+        "q": "zVbnYHE-X1hdW_Cf1_8HgSBh-YJlgZQw14Q208NzoKq_w9ai-touHBOguFRXB4cZAeH1CEOVKceNqxybNoxgg-XnVkALIgRPVuU1LEB3r_LRB7Rtbb_boILsuoPhxbt8M0Oc_jn2UNS8N8nWrpDKrbZ-DCfMg32EAf_7EmCw38M",
+        "dp": "Ch96_PNNwR54k_rnTEk8HclnaReTEtt08rDUGoyzvWytCknn4IRnHXRvzmrgyhIBbaA8Q7UVcfKOeW4mTk0sOXCFAO0ZrR2GqWGRKJrTNzeFs_qOqBFTLCZR5Moo1LG3uW2qk27LX68MyF-oMOtlReojRk7klHmDi-mEpTEimcs",
+        "dq": "tnH-xywXVTP4T5ZvD8Wjb1HMe5smgYmgE_1_kYxaEmlkVadBzE1LJtsxtFYLtb6Ns6SGyL7zq9mIwH58Um1L3CXL9FCXE7RsojKpmhX1wjmnDId9q0QK6oUpvVcspTm-UvZCaYgqmQtL6O3Hd_difhJl0HsUNciyH-zHsj6DKW0",
+        "qi": "U4uXot1mm9mdDTuL5bzYeQbVhe52KHLmpTBR5Y_DyKizJq2ZHc6qR-pRxrvyTqwKQ-gxx7uCaJ9mLOCl3nQwOsi_0fnv8rcKrR8AqhKGS9_3vRVUimBYlAstsAMHEh7N5B60MzMbpuzYAs_jNsSfl9-hMQLS-1oOkKLbnhnC5WY"
+      }
 
 webhook:
   api-key: 8lqZR9UC9YyjGtjll2Ss2-7hOqJbpBqsf7buG9ubyBs
