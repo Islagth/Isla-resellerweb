@@ -57,7 +57,7 @@ public class BitrixController {
         return ResponseEntity.ok(Map.of("updated", success));
     }
 
-     @GetMapping("/deal") 
+     @GetMapping(""/api/enel-leads/deal") 
     public ResponseEntity<DealDTO> getDealById(@RequestParam Integer id) {
         logger.info("Ricevuta richiesta getDealById per ID: {}", id);
         DealDTO dealDTO = dealService.getDealById(id, null);
@@ -66,7 +66,7 @@ public class BitrixController {
 
 
    // Ottieni tutta la lista dei Deal
-    @GetMapping("/deals") 
+    @GetMapping(""/api/enel-leads/deals") 
     public ResponseEntity<List<DealDTO>> getDealsList(
             @RequestParam(required = false) List<String> select,
             @RequestParam(required = false) Map<String, Object> filter,
@@ -130,7 +130,7 @@ public class BitrixController {
 
 
     //Cerca Contatto tramite Id
-    @GetMapping("/contatto") 
+    @GetMapping("/api/enel-leads/contatto") 
     public ResponseEntity<?> getContattoById(@PathVariable int id) {
         logger.info("Ricevuta richiesta getContattoById per id: {}", id);
         try {
@@ -145,7 +145,7 @@ public class BitrixController {
 
 
     //Ottieni lista dei contatti
-    @GetMapping("/contatti") 
+    @GetMapping("/api/enel-leads/contatti") 
     public ResponseEntity<?> listaContatti(@RequestBody Map<String, Object> requestBody) {
         logger.info("Ricevuta richiesta listaContatti");
         try {
