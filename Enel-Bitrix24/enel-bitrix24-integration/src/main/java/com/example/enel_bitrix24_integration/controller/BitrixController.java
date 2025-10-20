@@ -57,7 +57,7 @@ public class BitrixController {
         return ResponseEntity.ok(Map.of("updated", success));
     }
 
-     @GetMapping(""/api/enel-leads/deal") 
+     @GetMapping("/api/enel-leads/deal") 
     public ResponseEntity<DealDTO> getDealById(@RequestParam Integer id) {
         logger.info("Ricevuta richiesta getDealById per ID: {}", id);
         DealDTO dealDTO = dealService.getDealById(id, null);
