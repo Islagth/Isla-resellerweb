@@ -58,16 +58,21 @@ public class BitrixController {
     }
 
     //Cerca Deal per id
-    @GetMapping
-    public ResponseEntity<?> getDealById(@PathVariable Integer id) {
+   @GetMapping(params = "id")
+    public ResponseEntity<?> getDealById(@RequestParam Integer id) {
         logger.info("Ricevuta richiesta getDealById per ID: {}", id);
         DealDTO dealDTO = dealService.getDealById(id, null);
         return ResponseEntity.ok(dealDTO);
     }
 
     //Ottieni tutta la lista dei Deal
-    @GetMapping
-    public ResponseEntity<?> getDealsList(@RequestBody Map<String, Object> body) {
+     @GetMapping
+    public ResponseEntity<?> getDealsList(
+            @RequestParam(required = false) List<String> select,
+            @RequestParam(required = false) Map<String, Object> filter,
+            @RequestParam(required = false) Map<String, String> order,
+            @RequestParam(defaultValue = "0") Integer start
+    ) { {
         logger.info("Ricevuta richiesta getDealsList");
         List<String> select = (List<String>) body.get("select");
         Map<String, Object> filter = (Map<String, Object>) body.get("filter");
