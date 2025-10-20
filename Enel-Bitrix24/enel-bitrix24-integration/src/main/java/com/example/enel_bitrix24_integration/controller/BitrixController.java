@@ -57,7 +57,7 @@ public class BitrixController {
         return ResponseEntity.ok(Map.of("updated", success));
     }
 
-    @GetMapping(params = "id")
+     @GetMapping("/deal") 
     public ResponseEntity<DealDTO> getDealById(@RequestParam Integer id) {
         logger.info("Ricevuta richiesta getDealById per ID: {}", id);
         DealDTO dealDTO = dealService.getDealById(id, null);
@@ -66,7 +66,7 @@ public class BitrixController {
 
 
    // Ottieni tutta la lista dei Deal
-    @GetMapping
+    @GetMapping("/deals") 
     public ResponseEntity<List<DealDTO>> getDealsList(
             @RequestParam(required = false) List<String> select,
             @RequestParam(required = false) Map<String, Object> filter,
