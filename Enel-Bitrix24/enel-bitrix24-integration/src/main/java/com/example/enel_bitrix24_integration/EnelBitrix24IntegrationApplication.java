@@ -12,14 +12,12 @@ import org.springframework.web.client.RestTemplate;
 @ConfigurationPropertiesScan
 @EnableScheduling
 public class EnelBitrix24IntegrationApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(EnelBitrix24IntegrationApplication.class, args);
+    }
 
-	public static void main(String[] args) {
-		SpringApplication.run(EnelBitrix24IntegrationApplication.class, args);
-	}
-
-	@Bean
-	public RestTemplate restTemplate() {
-		return new RestTemplate();
-	}
-
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
 }
