@@ -1,25 +1,25 @@
-# Usa un'immagine con Java 17 (o 21 se serve)
-FROM openjdk:21-jdk-slim
-
-# Imposta una directory di lavoro dentro il container
+# Fase 1: build con Maven
+FROM maven:3.9.9-eclipse-temurin-21-jammy AS builder
 WORKDIR /app
 
-# Copia il file pom.xml e scarica le dipendenze (per build caching)
+# Copia il POM e scarica le dipendenze
 COPY pom.xml ./
 RUN mvn dependency:go-offline -B
 
-# Copia tutto il codice sorgente
-COPY src ./src
-
 # Compila il progetto
+COPY src ./src
 RUN mvn clean package -DskipTests
+
+# Fase 2: runtime (solo JDK)
+FROM openjdk:21-jdk-slim
+WORKDIR /app
+
+# Comando di avvio (sostituisci il nome del jar corretto)
+CMD ["java", "-jar", "target/enel-bitrix24-integration-0.0.1-SNAPSHOT.jar"]
 
 # Espone la porta 8080
 EXPOSE 8080
 
 # Comando di avvio
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
-# Comando di avvio (sostituisci il nome del jar corretto)
-CMD ["java", "-jar", "target/enel-bitrix24-integration-0.0.1-SNAPSHOT.jar"]
 
