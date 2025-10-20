@@ -66,7 +66,7 @@ public class BitrixController {
 
 
    // Ottieni tutta la lista dei Deal
-    @GetMapping(""/api/enel-leads/deals") 
+    @GetMapping("/api/enel-leads/deals") 
     public ResponseEntity<List<DealDTO>> getDealsList(
             @RequestParam(required = false) List<String> select,
             @RequestParam(required = false) Map<String, Object> filter,
