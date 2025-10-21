@@ -31,20 +31,20 @@ public class ContactService {
     }
 
     // ----------------- CREAZIONE CONTATTO -----------------
-    public String creaContatto(ContactDTO contactDTO, String accessToken) throws Exception {
+    public String creaContatto(ContactDTO contactDTO) throws Exception {
         logger.info("Avvio creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME());
         String url = baseUrl + "/rest/crm.contact.add";
-        Map<String, Object> fields = new ObjectMapper().convertValue(contactDTO, new TypeReference<Map<String, Object>>() {});
+        Map<String, Object> fields = objectMapper.convertValue(contactDTO, new TypeReference<Map<String, Object>>() {});
         Map<String, Object> payload = new HashMap<>();
         payload.put("fields", fields);
 
-        String result = postForResultString(url, payload, accessToken, "creazione contatto");
+        String result = postForResultString(url, payload, "creazione contatto");
         logger.info("Creazione contatto completata: {}", result);
         return result;
     }
 
     // Crea contatti da JSON del lotto
-    public void creaContattiDaLotto(String idLotto, String json, String accessToken) throws Exception {
+    public void creaContattiDaLotto(String idLotto, String json) throws Exception {
         logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
 
         List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
@@ -53,7 +53,7 @@ public class ContactService {
 
         for (ContactDTO contactDTO : contatti) {
             try {
-                creaContatto(contactDTO, accessToken);
+                creaContatto(contactDTO);
                 successo++;
             } catch (Exception e) {
                 logger.error("Errore creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME(), e);
@@ -69,7 +69,7 @@ public class ContactService {
     }
 
     // ----------------- AGGIORNAMENTO CONTATTO -----------------
-    public String aggiornaContatto(int contactId, Map<String, Object> fields, Map<String, Object> params, String accessToken) throws Exception {
+    public String aggiornaContatto(int contactId, Map<String, Object> fields, Map<String, Object> params) throws Exception {
         logger.info("Avvio aggiornamento contatto ID: {}", contactId);
         String url = baseUrl + "/rest/crm.contact.update";
 
@@ -80,26 +80,26 @@ public class ContactService {
             payload.put("PARAMS", params);
         }
 
-        String result = postForResultString(url, payload, accessToken, "aggiornamento contatto");
+        String result = postForResultString(url, payload, "aggiornamento contatto");
         logger.info("Aggiornamento contatto ID {} completato: {}", contactId, result);
         return result;
     }
 
     // ----------------- GET CONTATTO PER ID -----------------
-    public Map<String, Object> getContattoById(int contactId, String accessToken) throws Exception {
+    public Map<String, Object> getContattoById(int contactId) throws Exception {
         logger.info("Recupero contatto per ID: {}", contactId);
         String url = baseUrl + "/rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
 
-        Map<String, Object> result = postForResultMap(url, payload, accessToken, "recupero contatto");
+        Map<String, Object> result = postForResultMap(url, payload, "recupero contatto");
         logger.info("Recupero contatto ID {} completato", contactId);
         return result;
     }
 
     // ----------------- LISTA CONTATTO -----------------
-    public Map<String, Object> listaContatti(Map<String, Object> filter, Map<String, String> order, List<String> select, Integer start, String accessToken) throws Exception {
+    public Map<String, Object> listaContatti(Map<String, Object> filter, Map<String, String> order, List<String> select, Integer start) throws Exception {
         logger.info("Richiesta lista contatti");
         String url = baseUrl + "/rest/9/1varqs6u91afcteh/crm.contact.list.json";
 
@@ -117,20 +117,20 @@ public class ContactService {
             payload.put("START", start);
         }
 
-        Map<String, Object> result = postForResultMap(url, payload, accessToken, "lista contatti");
+        Map<String, Object> result = postForResultMap(url, payload, "lista contatti");
         logger.info("Lista contatti recuperata, numero elementi: {}", ((List<?>)result.getOrDefault("result", new ArrayList<>())).size());
         return result;
     }
 
     // ----------------- ELIMINAZIONE CONTATTO -----------------
-    public boolean eliminaContatto(int contactId, String accessToken) throws Exception {
+    public boolean eliminaContatto(int contactId) throws Exception {
         logger.info("Avvio eliminazione contatto ID: {}", contactId);
         String url = baseUrl + "/rest/crm.contact.delete";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
 
-        Map<String, Object> response = postForResultMap(url, payload, accessToken, "eliminazione contatto");
+        Map<String, Object> response = postForResultMap(url, payload, "eliminazione contatto");
         Object result = response.get("result");
         logger.info("Eliminazione contatto ID {} risultato: {}", contactId, result);
         if (result instanceof Boolean) {
@@ -140,11 +140,10 @@ public class ContactService {
         }
     }
 
-
     // Metodo privato per chiamate POST che restituiscono stringa (messaggi di successo)
-    private String postForResultString(String url, Map<String, Object> payload, String accessToken, String actionDescription) throws Exception {
+    private String postForResultString(String url, Map<String, Object> payload, String actionDescription) throws Exception {
         logger.info("Esecuzione azione: {} con URL: {}", actionDescription, url);
-        Map<String, Object> response = postForResultMap(url, payload, accessToken, actionDescription);
+        Map<String, Object> response = postForResultMap(url, payload, actionDescription);
         Object result = response.get("result");
         if (result != null) {
             logger.info("{} completata con risultato: {}", actionDescription, result.toString());
@@ -157,11 +156,11 @@ public class ContactService {
     }
 
     // Metodo privato generico per chiamate POST che restituiscono mappa
-    private Map<String, Object> postForResultMap(String url, Map<String, Object> payload, String accessToken, String actionDescription) throws Exception {
+    private Map<String, Object> postForResultMap(String url, Map<String, Object> payload, String actionDescription) throws Exception {
         logger.info("Invio POST per {} a URL: {}", actionDescription, url);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + accessToken);
+        // Rimosso l'header Authorization perché non serve più
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
@@ -169,18 +168,9 @@ public class ContactService {
         try {
             response = restTemplate.postForEntity(new URI(url), request, Map.class);
             logger.info("Risposta ricevuta con status: {}", response.getStatusCode());
-        } catch (HttpClientErrorException.Unauthorized e) {
-            logger.error("Token non valido o scaduto durante {}", actionDescription);
-            throw new RuntimeException("Token non valido o scaduto.");
-        } catch (HttpClientErrorException.Forbidden e) {
-            logger.error("Accesso negato per {}: {}", actionDescription, e.getMessage());
-            throw new RuntimeException("Accesso negato per " + actionDescription);
-        } catch (HttpClientErrorException.BadRequest e) {
-            logger.error("Richiesta non valida per {}: {}", actionDescription, e.getResponseBodyAsString());
-            throw new RuntimeException("Richiesta non valida per " + actionDescription + ": " + e.getResponseBodyAsString());
         } catch (HttpClientErrorException e) {
-            logger.error("Errore HTTP generico per {}: {}", actionDescription, e.getResponseBodyAsString());
-            throw new RuntimeException("Errore HTTP generico per " + actionDescription + ": " + e.getResponseBodyAsString());
+            logger.error("Errore HTTP per {}: {}", actionDescription, e.getResponseBodyAsString());
+            throw new RuntimeException("Errore HTTP per " + actionDescription + ": " + e.getResponseBodyAsString());
         } catch (Exception e) {
             logger.error("Errore durante {}: {}", actionDescription, e.getMessage(), e);
             throw new RuntimeException("Errore durante " + actionDescription + ": " + e.getMessage(), e);
@@ -202,6 +192,7 @@ public class ContactService {
             throw new RuntimeException(msg);
         }
     }
+
 
 
 }
