@@ -125,6 +125,12 @@ public class LottoService {
         }
     }
 
+    public String scaricaLottoJsonSingolo(String idLotto) throws Exception {
+    String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".json";
+    HttpEntity<String> entity = new HttpEntity<>(getApiKeyHeaders());
+    ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
+    return response.getBody();
+}
 
     public byte[] scaricaLottoZip(String idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".zip";
