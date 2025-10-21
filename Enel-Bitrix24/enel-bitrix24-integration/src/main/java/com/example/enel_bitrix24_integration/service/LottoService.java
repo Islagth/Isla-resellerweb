@@ -79,7 +79,7 @@ public class LottoService {
         String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".json";
         logger.info("Scaricamento JSON per lotto id: {}", idLotto);
 
-        HttpEntity<String> entity = new HttpEntity<>(getApiKeyHeaders());
+        HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
         ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
 
         if (response.getStatusCode().is2xxSuccessful()) {
