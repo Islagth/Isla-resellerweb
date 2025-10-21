@@ -74,28 +74,57 @@ public class LottoService {
         return ultimiLotti;
     }
 
-    public String scaricaLottoJson(String idLotto) throws Exception {
-        String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".json";
-        logger.info("Scaricamento JSON per lotto id: {}", idLotto);
-
-        HttpEntity<String> entity = new HttpEntity<>(getApiKeyHeaders());  // usa API-Key per questa chiamata
-
-        ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            logger.info("Scaricamento JSON completato per lotto id: {}", idLotto);
-            return response.getBody();
-        } else if (response.getStatusCode() == HttpStatus.NOT_FOUND) {
-            logger.error("Slice Id non trovato per lotto id: {}", idLotto);
-            throw new RuntimeException("Slice Id not found");
-        } else if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
-            logger.error("Slice Id non disponibile per lotto id: {}", idLotto);
-            throw new RuntimeException("Slice Id not available");
-        } else {
-            logger.error("Errore scaricamento JSON per lotto {}: status {}", idLotto, response.getStatusCode());
-            throw new RuntimeException("Errore scaricamento JSON per lotto " + idLotto);
+    @Scheduled(fixedRate = 60000) // Esegue ogni 60 secondi
+    public void scaricaLottiJsonAutomaticamente() {
+        try {
+            logger.info("=== Avvio flusso automatico: verifica e scaricamento lotti JSON ===");
+    
+            // 1️⃣ Recupera la lista dei lotti disponibili
+            List<LottoDTO> lottiDisponibili = verificaLottiDisponibili();
+    
+            if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
+                logger.info("Nessun lotto disponibile al momento.");
+                return;
+            }
+    
+            // 2️⃣ Scarica automaticamente il JSON per ogni lotto
+            for (LottoDTO lotto : lottiDisponibili) {
+                try {
+                    String idLotto = lotto.getId();
+                    String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".json";
+                    logger.info("Scaricamento JSON per lotto id: {}", idLotto);
+    
+                    HttpEntity<String> entity = new HttpEntity<>(getApiKeyHeaders());
+                    ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
+    
+                    if (response.getStatusCode().is2xxSuccessful()) {
+                        logger.info("✅ Scaricamento completato per lotto id: {}", idLotto);
+    
+                        // (Facoltativo) puoi processare subito il JSON qui:
+                        // contactService.creaContattiDaLotto(idLotto, accessToken);
+                    } 
+                    else if (response.getStatusCode() == HttpStatus.NOT_FOUND) {
+                        logger.warn("⚠️ Slice Id non trovato per lotto id: {}", idLotto);
+                    } 
+                    else if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
+                        logger.warn("🚫 Slice Id non disponibile per lotto id: {}", idLotto);
+                    } 
+                    else {
+                        logger.error("Errore scaricamento JSON per lotto {}: status {}", idLotto, response.getStatusCode());
+                    }
+    
+                } catch (Exception ex) {
+                    logger.error("Errore durante lo scaricamento del lotto: {}", ex.getMessage(), ex);
+                }
+            }
+    
+            logger.info("=== Flusso automatico completato ===");
+    
+        } catch (Exception e) {
+            logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
         }
     }
+
 
     public byte[] scaricaLottoZip(String idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".zip";
