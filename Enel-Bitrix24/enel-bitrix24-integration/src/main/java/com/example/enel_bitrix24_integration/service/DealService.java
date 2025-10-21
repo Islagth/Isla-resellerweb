@@ -13,17 +13,35 @@ import java.util.*;
 @Service
 public class DealService {
 
-    private final RestTemplate restTemplate;
+     private final RestTemplate restTemplate;
     private final String baseUrl;
+    private final ObjectMapper objectMapper;
 
     private static final Logger logger = LoggerFactory.getLogger(DealService.class);
 
-    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl) {
+    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
+        this.objectMapper = objectMapper;
     }
 
     // ----------------- CREAZIONE DEAL -----------------
+    // Crea deal da JSON del lotto
+    public void creaDealDaLotto(String idLotto, String json, String accessToken) throws Exception {
+        logger.info("Avvio creazione deal da lotto id: {}", idLotto);
+
+
+        List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
+        for (DealDTO dto : deals) {
+            try {
+                addDeal(dto, null, accessToken);
+            } catch (Exception e) {
+                logger.error("Errore creazione deal: {}", dto.getTitle(), e);
+            }
+        }
+    }
+
+    // Creazione singolo deal
     public Integer addDeal(DealDTO dto, Map<String, Object> params, String accessToken) {
         logger.info("Avvio creazione deal con titolo: {}", dto.getTitle());
         String url = baseUrl + "/rest/crm.deal.add";
@@ -36,7 +54,6 @@ public class DealService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
 
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
-
         Map<String, Object> body = extractAndValidateBody(response);
 
         if (body.containsKey("result") && body.get("result") instanceof Integer) {
@@ -44,9 +61,7 @@ public class DealService {
             logger.info("Deal creato con ID: {}", dealId);
             return dealId;
         }
-        String msg = "Risposta inattesa dal server: " + body;
-        logger.error(msg);
-        throw new RuntimeException(msg);
+        throw new RuntimeException("Risposta inattesa dal server: " + body);
     }
 
     // ----------------- AGGIORNAMENTO DEAL -----------------
