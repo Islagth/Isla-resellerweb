@@ -96,17 +96,16 @@ public class BitrixController {
     }
 
     //Aggiungi Contatto da lista Json
-    @PostMapping("/api/enel-leads/{idLotto}/add-contact")
-    public ResponseEntity<?> creaContattiDalLotto(@PathVariable String idLotto) {
-        logger.info("Ricevuta richiesta creaContattiDalLotto per lotto id: {}", idLotto);
+    @GetMapping("/api/enel-leads/contatto") 
+    public ResponseEntity<?> getContattoById(@RequestParam int id) {
+        logger.info("Ricevuta richiesta getContattoById per id: {}", id);
         try {
-            contactService.creaContattiDaLotto(idLotto, null);
-            logger.info("Creazione contatti da lotto {} avviata con successo", idLotto);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Creazione contatti avviata con successo"));
+            Map<String, Object> contact = contactService.getContattoById(id, null);
+            logger.info("Recuperato contatto ID {}", id);
+            return ResponseEntity.ok(contact);
         } catch (Exception e) {
-            logger.error("Errore nella creazione dei contatti da lotto " + idLotto, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", "Errore durante la creazione dei contatti: " + e.getMessage()));
+            logger.error("Errore recupero contatto ID " + id, e);
+            return buildErrorResponse("Errore recupero contatto", e);
         }
     }
 
