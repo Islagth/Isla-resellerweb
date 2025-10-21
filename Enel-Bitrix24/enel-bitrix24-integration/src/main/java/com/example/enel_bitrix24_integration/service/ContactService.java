@@ -45,7 +45,7 @@ public class ContactService {
 
     public void creaContattiDaLotto(String idLotto, String accessToken) throws Exception {
         logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
-        String json = lottoService.scaricaLottoJson(idLotto);
+        String json = lottoService.scaricaLottiJson();
 
         // Parsare JSON array in lista ContactDTO
         List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
