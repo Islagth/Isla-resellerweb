@@ -2,10 +2,8 @@ package com.example.enel_bitrix24_integration.controller;
 
 
 import com.example.enel_bitrix24_integration.dto.DealDTO;
-import com.example.enel_bitrix24_integration.security.OAuthService;
 import com.example.enel_bitrix24_integration.service.ContactService;
 import com.example.enel_bitrix24_integration.service.DealService;
-import com.example.enel_bitrix24_integration.security.TokenStorageService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -30,8 +28,8 @@ public class BitrixController {
 
     private final DealService dealService;
     private final ContactService contactService;
-    private final OAuthService oAuthService;
-    private final TokenStorageService tokenStorageService;
+
+
 
     // Aggiungi Deal
     @PostMapping("/api/enel-leads/add-Deal")
