@@ -52,7 +52,7 @@ public class LottoService {
         return headers;
     }
 
-    
+     @Scheduled(fixedRate = 60000)
     public List<LottoDTO> verificaLottiDisponibili() {
         try {
             String url = baseUrl + "/partner-api/v5/slices";
