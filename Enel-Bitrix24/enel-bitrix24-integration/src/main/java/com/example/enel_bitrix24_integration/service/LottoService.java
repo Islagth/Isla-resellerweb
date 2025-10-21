@@ -90,7 +90,7 @@ public class LottoService {
             // 2️⃣ Scarica automaticamente il JSON per ogni lotto
             for (LottoDTO lotto : lottiDisponibili) {
                 try {
-                    String idLotto = lotto.getId();
+                    String idLotto = lotto.getId_lotto();
                     String url = baseUrl + "/partner-api/v5/slices/" + idLotto + ".json";
                     logger.info("Scaricamento JSON per lotto id: {}", idLotto);
     
