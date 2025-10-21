@@ -75,7 +75,7 @@ public class LottoService {
     }
 
     @Scheduled(fixedRate = 60000) // Esegue ogni 60 secondi
-    public void scaricaLottiJsonAutomaticamente() {
+    public void scaricaLottiJson() {
         try {
             logger.info("=== Avvio flusso automatico: verifica e scaricamento lotti JSON ===");
     
