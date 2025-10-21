@@ -43,13 +43,40 @@ public class ContactService {
         return result;
     }
 
-    public void creaContattiDaLotto(String idLotto, String accessToken) throws Exception {
+     // Flusso automatico: scarica e lavora i lotti disponibili
+    @Scheduled(fixedRate = 60000) // ogni 60 secondi
+    public void processaLottiAutomaticamente() {
+        try {
+            logger.info("=== Avvio flusso automatico: lavorazione lotti ===");
+
+            List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
+
+            if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
+                logger.info("Nessun lotto disponibile al momento.");
+                return;
+            }
+
+            for (LottoDTO lotto : lottiDisponibili) {
+                String idLotto = lotto.getId_lotto();
+                try {
+                    String json = lottoService.scaricaLottoJson(idLotto);
+                    creaContattiDaLotto(idLotto, json, null);
+                } catch (Exception e) {
+                    logger.error("Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
+                }
+            }
+
+            logger.info("=== Flusso automatico completato ===");
+        } catch (Exception e) {
+            logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
+        }
+    }
+
+    // Crea contatti da JSON del lotto
+    public void creaContattiDaLotto(String idLotto, String json, String accessToken) throws Exception {
         logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
-        String json = lottoService.scaricaLottiJson();
 
-        // Parsare JSON array in lista ContactDTO
         List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
-
         List<String> errori = new ArrayList<>();
         int successo = 0;
 
