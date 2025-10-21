@@ -27,43 +27,24 @@ public class LottoScheduler {
         this.dealService = dealService;
     }
 
-    @Scheduled(fixedRate = 60000) // ogni 60 secondi
-    public void processaTuttiILotti() {
-        try {
-            logger.info("=== Avvio flusso automatico: verifica e lavorazione lotti ===");
-
-            // Recupera tutti i lotti disponibili dal LottoService
-            List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
-
-            if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
-                logger.info("Nessun lotto disponibile al momento.");
-                return;
-            }
-
-            // Per ogni lotto, scarica JSON e processa contatti e deal
-            for (LottoDTO lotto : lottiDisponibili) {
-                String idLotto = lotto.getId_lotto();
-                try {
-                    // Scarica JSON singolo lotto
-                    String json = lottoService.scaricaLottoJson(idLotto);
-
-                    // Creazione contatti dal lotto
-                    contactService.creaContattiDaLotto(idLotto, json, accessToken);
-
-                    // Creazione deal dal lotto
-                    dealService.creaDealDaLotto(idLotto, json, accessToken);
-
-                    logger.info("Lavorazione completata per lotto id: {}", idLotto);
-
-                } catch (Exception e) {
-                    logger.error("Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
+        @Scheduled(fixedRate = 60000)
+        public void processaTuttiILotti() {
+            try {
+                List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
+                if (lottiDisponibili == null || lottiDisponibili.isEmpty()) return;
+        
+                for (LottoDTO lotto : lottiDisponibili) {
+                    String idLotto = lotto.getId_lotto();
+                    try {
+                        String json = lottoService.scaricaLottoJson(idLotto);
+                        contactService.creaContattiDaLotto(idLotto, json, null);
+                        dealService.creaDealDaLotto(idLotto, json, null);
+                    } catch (Exception e) {
+                        logger.error("Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
+                    }
                 }
+            } catch (Exception e) {
+                logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
             }
-
-            logger.info("=== Flusso automatico completato ===");
-
-        } catch (Exception e) {
-            logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
         }
-    }
 }
