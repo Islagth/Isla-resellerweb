@@ -178,7 +178,7 @@ public class EnelController {
         }
     }
     //Richiesta lista lotti blacklist da scaricare
-    @GetMapping("/ultimiBlacklist")
+    @PostMapping("/ultimiBlacklist")
     public ResponseEntity<?> getUltimiLottiBlacklist(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
             @RequestHeader(value = "api-auth-token", required = false) String apiKey) {
