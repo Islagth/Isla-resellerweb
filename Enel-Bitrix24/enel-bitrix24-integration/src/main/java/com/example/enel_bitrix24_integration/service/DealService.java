@@ -15,7 +15,7 @@ import java.util.*;
 @Service
 public class DealService {
 
-     private final RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
     private final String baseUrl;
     private final ObjectMapper objectMapper;
 
@@ -28,15 +28,14 @@ public class DealService {
     }
 
     // ----------------- CREAZIONE DEAL -----------------
-    // Crea deal da JSON del lotto
-    public void creaDealDaLotto(String idLotto, String json, String accessToken) throws Exception {
+// Crea deal da JSON del lotto
+    public void creaDealDaLotto(String idLotto, String json) throws Exception {
         logger.info("Avvio creazione deal da lotto id: {}", idLotto);
-
 
         List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
         for (DealDTO dto : deals) {
             try {
-                addDeal(dto, null, accessToken);
+                addDeal(dto, null);
             } catch (Exception e) {
                 logger.error("Errore creazione deal: {}", dto.getTitle(), e);
             }
@@ -44,7 +43,7 @@ public class DealService {
     }
 
     // Creazione singolo deal
-    public Integer addDeal(DealDTO dto, Map<String, Object> params, String accessToken) {
+    public Integer addDeal(DealDTO dto, Map<String, Object> params) {
         logger.info("Avvio creazione deal con titolo: {}", dto.getTitle());
         String url = baseUrl + "/rest/crm.deal.add";
         Map<String, Object> fields = convertDtoToFields(dto);
@@ -67,7 +66,7 @@ public class DealService {
     }
 
     // ----------------- AGGIORNAMENTO DEAL -----------------
-    public boolean updateDeal(DealDTO dto, Map<String, Object> params, String accessToken) {
+    public boolean updateDeal(DealDTO dto, Map<String, Object> params) {
         if (dto.getId() == null || dto.getId() <= 0) {
             throw new IllegalArgumentException("ID del deal deve essere valido per l’update");
         }
@@ -93,7 +92,7 @@ public class DealService {
     }
 
     // ----------------- GET DEAL PER ID -----------------
-    public DealDTO getDealById(Integer id, String accessToken) {
+    public DealDTO getDealById(Integer id) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("ID del deal deve essere valido e positivo");
         }
@@ -120,7 +119,7 @@ public class DealService {
 
     // ----------------- LISTA DEAL -----------------
     public List<DealDTO> getDealsList(List<String> select, Map<String, Object> filter,
-                                      Map<String, String> order, int start, String accessToken) {
+                                      Map<String, String> order, int start) {
         logger.info("Richiesta lista deal con filter: {}, order: {}, start: {}", filter, order, start);
         String url = baseUrl + "/rest/9/9yi2oktsybau3wkn/crm.deal.list.json";
         Map<String, Object> requestBody = new HashMap<>();
@@ -149,7 +148,7 @@ public class DealService {
     }
 
     // ----------------- ELIMINAZIONE DEAL -----------------
-    public boolean deleteDeal(Integer id, String accessToken) {
+    public boolean deleteDeal(Integer id) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("ID del deal deve essere valido e positivo");
         }
@@ -289,4 +288,9 @@ public class DealService {
             return null;
         }
     }
+
+
+
+
 }
+
