@@ -97,7 +97,7 @@ public class EnelController {
 
 
     // Scarica lotto JSON → restituisce il contenuto
-    @GetMapping("/{idLotto}/json")
+    @GetMapping("/scarica-json")
     public ResponseEntity<?> scaricaJson(
             @PathVariable String idLotto,
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
@@ -136,7 +136,7 @@ public class EnelController {
 
 
     // Scarica lotto ZIP → restituisce il file binario
-    @GetMapping("/{idLotto}/zip")
+    @GetMapping("/scarica-zip")
     public ResponseEntity<?> scaricaZip(
             @PathVariable String idLotto,
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
@@ -201,7 +201,7 @@ public class EnelController {
     }
 
     // Scarica lotto blacklist ZIP → restituisce il file binario
-    @GetMapping("blacklist/{idLotto}/zip")
+    @GetMapping("blacklist/{idLotto}/blacklist-zip ")
     public ResponseEntity<?> scaricaZipBlacklist(
             @PathVariable Long idLotto,
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
