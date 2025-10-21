@@ -112,7 +112,7 @@ public class EnelController {
         }
 
         try {
-            String json = lottoService.scaricaLottiJson();
+            String json = lottoService.scaricaLottiJson(idLotto);
             logger.info("scaricaJson completato con successo per lotto id: {}", idLotto);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
