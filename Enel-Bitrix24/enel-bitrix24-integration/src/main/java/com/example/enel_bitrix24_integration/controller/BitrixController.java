@@ -1,9 +1,7 @@
 package com.example.enel_bitrix24_integration.controller;
 
-import com.example.enel_bitrix24_integration.config.BitrixOAuthProperties;
-import com.example.enel_bitrix24_integration.config.TokenResponse;
+
 import com.example.enel_bitrix24_integration.dto.DealDTO;
-import com.example.enel_bitrix24_integration.config.TokenRecord;
 import com.example.enel_bitrix24_integration.security.OAuthService;
 import com.example.enel_bitrix24_integration.service.ContactService;
 import com.example.enel_bitrix24_integration.service.DealService;
