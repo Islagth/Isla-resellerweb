@@ -17,7 +17,7 @@ public class LottoScheduler {
     private final ContactService contactService;
     private final DealService dealService;
 
-    private final String accessToken = null; // oppure leggere da config se serve
+ 
 
     public LottoScheduler(LottoService lottoService,
                           ContactService contactService,
@@ -37,8 +37,8 @@ public class LottoScheduler {
                     String idLotto = lotto.getId_lotto();
                     try {
                         String json = lottoService.scaricaLottoJson(idLotto);
-                        contactService.creaContattiDaLotto(idLotto, json, null);
-                        dealService.creaDealDaLotto(idLotto, json, null);
+                        contactService.creaContattiDaLotto(idLotto, json);
+                        dealService.creaDealDaLotto(idLotto, json);
                     } catch (Exception e) {
                         logger.error("Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
                     }
@@ -48,3 +48,4 @@ public class LottoScheduler {
             }
         }
 }
+
