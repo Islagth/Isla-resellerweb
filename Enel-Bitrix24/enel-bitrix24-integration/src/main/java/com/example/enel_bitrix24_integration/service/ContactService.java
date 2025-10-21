@@ -43,35 +43,6 @@ public class ContactService {
         return result;
     }
 
-     // Flusso automatico: scarica e lavora i lotti disponibili
-    @Scheduled(fixedRate = 60000) // ogni 60 secondi
-    public void processaLottiAutomaticamente() {
-        try {
-            logger.info("=== Avvio flusso automatico: lavorazione lotti ===");
-
-            List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
-
-            if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
-                logger.info("Nessun lotto disponibile al momento.");
-                return;
-            }
-
-            for (LottoDTO lotto : lottiDisponibili) {
-                String idLotto = lotto.getId_lotto();
-                try {
-                    String json = lottoService.scaricaLottoJson(idLotto);
-                    creaContattiDaLotto(idLotto, json, null);
-                } catch (Exception e) {
-                    logger.error("Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
-                }
-            }
-
-            logger.info("=== Flusso automatico completato ===");
-        } catch (Exception e) {
-            logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
-        }
-    }
-
     // Crea contatti da JSON del lotto
     public void creaContattiDaLotto(String idLotto, String json, String accessToken) throws Exception {
         logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
@@ -86,7 +57,7 @@ public class ContactService {
                 successo++;
             } catch (Exception e) {
                 logger.error("Errore creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME(), e);
-                errori.add("Contatto " + contactDTO.getNAME() + " " + contactDTO.getLAST_NAME() + ": " + e.getMessage());
+                errori.add(contactDTO.getNAME() + " " + contactDTO.getLAST_NAME() + ": " + e.getMessage());
             }
         }
 
