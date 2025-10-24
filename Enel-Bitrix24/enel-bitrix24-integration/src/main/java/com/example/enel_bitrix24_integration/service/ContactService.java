@@ -13,6 +13,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
+import com.example.enel_bitrix24_integration.enums.ResultCode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.net.URI;
