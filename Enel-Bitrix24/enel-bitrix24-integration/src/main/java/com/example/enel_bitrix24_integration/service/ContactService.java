@@ -9,7 +9,11 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.net.URI;
 import java.util.*;
 
@@ -22,6 +26,9 @@ public class ContactService {
     private final String baseUrl;
     private final LottoService lottoService;
     private final ObjectMapper objectMapper;
+
+    // Cache in memoria dell'ultimo stato noto (in produzione -> Redis o DB)
+    private final Map<Long, ContactDTO> cacheContatti = new ConcurrentHashMap<>();
 
     public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, LottoService lottoService, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
@@ -193,6 +200,55 @@ public class ContactService {
         }
     }
 
+    /**
+     * Recupera la lista contatti da Bitrix e trova quelli modificati rispetto alla cache.
+     */
+    public List<LeadRequest> trovaContattiModificati() {
+        List<LeadRequest> modificati = new ArrayList<>();
+
+        try {
+            Map<String, Object> filter = new HashMap<>();
+            filter.put("ACTIVE", "Y");
+            Map<String, Object> result = listaContatti(filter, null, List.of("ID", "NAME", "DATE_MODIFY"), 0);
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
+
+            for (Map<String, Object> contattoMap : lista) {
+                Long id = Long.parseLong(contattoMap.get("ID").toString());
+                String dateModify = (String) contattoMap.get("DATE_MODIFY");
+
+                ContactDTO nuovo = new ContactDTO();
+                try {
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    Date parsedDate = sdf.parse(dateModify);
+                    nuovo.setDATE_MODIFY(parsedDate);
+                } catch (ParseException e) {
+                    logger.warn("Formato data non valido per contatto {}: {}", id, dateModify);
+                    continue; // salta il contatto se la data non è valida
+                }
+
+                ContactDTO vecchio = cacheContatti.get(id);
+                if (vecchio == null || !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY())) {
+                    LeadRequest req = new LeadRequest();
+                    req.setContactId(id);
+                    req.setWorkedCode("CONTACT-" + id);
+                    req.setWorked_Date(LocalDateTime.now());
+                    req.setResultCode(ResultCode.S001); // esempio di codice default
+                    req.setCaller("AUTO_SCHEDULER");
+                    modificati.add(req);
+
+                    // aggiorna cache
+                    cacheContatti.put(id, nuovo);
+                }
+
+            }
+        } catch (Exception e) {
+            logger.error("Errore durante il recupero o il confronto dei contatti", e);
+        }
+
+        return modificati;
+    }
 
 
 }
