@@ -66,19 +66,6 @@ public class EnelController {
         }
     }
 
-    //Aggiunta contatto lavorato alla lista per l'invio
-    @PostMapping("/aggiungi")
-    public ResponseEntity<String> aggiungiContatto(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
-            @RequestHeader(value = "api-auth-token", required = false) String apiKey,
-            @RequestBody LeadRequest request) {
-        if (!isAuthorized(authHeader, apiKey)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Accesso non autorizzato.");
-        }
-        logger.info("Aggiunta contatto alla coda di invio schedulato: {}", request);
-        leadScheduler.aggiungiContatto(request);
-        return ResponseEntity.ok("Contatto aggiunto in coda per l'invio schedulato");
-    }
 
     //Richiesta lista lotti da scaricare
     @GetMapping("/ultimi")
