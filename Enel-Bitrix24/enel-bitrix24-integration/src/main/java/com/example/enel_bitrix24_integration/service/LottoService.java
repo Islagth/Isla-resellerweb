@@ -51,38 +51,43 @@ public class LottoService {
     }
 
      @Scheduled(fixedRate = 60000)
-public List<LottoDTO> verificaLottiDisponibili() {
-    try {
-        String url = baseUrl + "/partner-api/v5/slices";
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("id_campagna", "65704");
-        requestBody.put("size", 1);
-
-        String jsonBody = objectMapper.writeValueAsString(requestBody);
-        logger.info("JSON inviato: {}", jsonBody);
-
-        HttpHeaders headers = getBearerAuthHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        logger.info("Headers inviati: {}", headers);
-
-        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                new URI(url), HttpMethod.POST, entity, String.class);
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            LottoDTO lotto = objectMapper.readValue(response.getBody(), LottoDTO.class);
-            ultimiLotti = Collections.singletonList(lotto);
-            logger.info("Lotto aggiornato: {}", lotto.getId_lotto());
-        } else {
-            logger.error("Errore risposta API: {}", response.getStatusCode());
-            logger.error("Corpo risposta: {}", response.getBody());
+    public List<LottoDTO> verificaLottiDisponibili() {
+        try {
+            String url = baseUrl + "/partner-api/v5/slices";
+    
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("idCampagna", 65704); // <-- intero e camelCase
+            requestBody.put("pageSize", 1);       // <-- nome campo coerente con API tipiche
+    
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            logger.info("JSON inviato: {}", jsonBody);
+    
+            HttpHeaders headers = getBearerAuthHeaders();
+            headers.set("Content-Type", "application/json;charset=UTF-8");
+    
+            HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+    
+            ResponseEntity<String> response = restTemplate.exchange(
+                    new URI(url), HttpMethod.POST, entity, String.class);
+    
+            logger.info("Codice risposta: {}", response.getStatusCode());
+            logger.info("Corpo risposta: {}", response.getBody());
+    
+            if (response.getStatusCode().is2xxSuccessful()) {
+                LottoDTO lotto = objectMapper.readValue(response.getBody(), LottoDTO.class);
+                ultimiLotti = Collections.singletonList(lotto);
+                logger.info("Lotto aggiornato: {}", lotto.getId_lotto());
+            } else {
+                logger.error("Errore risposta API: {}", response.getStatusCode());
+                logger.error("Corpo risposta: {}", response.getBody());
+            }
+    
+        } catch (Exception e) {
+            logger.error("Errore Lotto API: {}", e.getMessage(), e);
         }
-    } catch (Exception e) {
-        logger.error("Errore Lotto API: {}", e.getMessage(), e);
+    
+        return ultimiLotti;
     }
-    return ultimiLotti;
-}
 
 
     // Scarica JSON di un lotto specifico
