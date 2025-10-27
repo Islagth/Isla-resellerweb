@@ -25,7 +25,7 @@ webhook:
 bitrix24:
   api:
     mode: WEBHOOK
-    base-url: https://b24-vayzx4.bitrix24.it/
+    base-url: https://b24-vayzx4.bitrix24.it
     redirect-uri: https://b24-vayzx4.bitrix24.it/oauth/callback
     webhook-url: https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97
     
