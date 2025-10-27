@@ -56,7 +56,7 @@ public class LottoService {
             String url = baseUrl + "/partner-api/v5/slices";
     
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("idCampagna", 65704); // <-- intero e camelCase
+            requestBody.put("idCampagna", "65704 - RESELLER_LEAD_WIDGET"); // <-- intero e camelCase
             requestBody.put("pageSize", 1);       // <-- nome campo coerente con API tipiche
     
             String jsonBody = objectMapper.writeValueAsString(requestBody);
