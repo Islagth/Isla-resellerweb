@@ -53,54 +53,63 @@ public class LottoService {
 
     @Scheduled(fixedRate = 60000)
     public List<LottoDTO> verificaLottiDisponibili() {
-        try {
-            String url = baseUrl + "/partner-api/v5/slices";
-    
-            // ✅ ID numerico, non stringa
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("idCampagna", 65704);
-            requestBody.put("pageSize", 1);
-    
-            String jsonBody = objectMapper.writeValueAsString(requestBody);
-            logger.info("JSON inviato: {}", jsonBody);
-    
-            HttpHeaders headers = getBearerAuthHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-    
-            HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-    
-            ResponseEntity<String> response = restTemplate.exchange(
-                    new URI(url), HttpMethod.POST, entity, String.class);
-    
-            logger.info("Codice risposta: {}", response.getStatusCode());
-            logger.info("Corpo risposta: {}", response.getBody());
-    
-            if (response.getStatusCode().is2xxSuccessful()) {
-                LottoDTO lotto = objectMapper.readValue(response.getBody(), LottoDTO.class);
-                ultimiLotti = Collections.singletonList(lotto);
-                logger.info("Lotto aggiornato: {}", lotto.getId_lotto());
-            } else {
-                logger.error("Errore risposta API: {}", response.getStatusCode());
-                logger.error("Corpo risposta: {}", response.getBody());
-    
-                // ✅ Se risposta negativa, prova a leggerne il messaggio
-                try {
-                    JsonNode errorNode = objectMapper.readTree(response.getBody());
-                    if (errorNode.has("message")) {
-                        logger.error("Messaggio di errore Enel: {}", errorNode.get("message").asText());
-                    }
-                } catch (Exception ex) {
-                    logger.warn("Impossibile leggere messaggio di errore dettagliato", ex);
+    try {
+        String url = baseUrl + "/partner-api/v5/slices";
+
+        // ✅ ID numerico, non stringa
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("idCampagna", 65704);
+        requestBody.put("pageSize", 1);
+
+        String jsonBody = objectMapper.writeValueAsString(requestBody);
+        logger.info("JSON inviato: {}", jsonBody);
+
+        HttpHeaders headers = getBearerAuthHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                new URI(url), HttpMethod.POST, entity, String.class);
+
+        logger.info("Codice risposta: {}", response.getStatusCode());
+        logger.info("Corpo risposta: {}", response.getBody());
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            LottoDTO lotto = objectMapper.readValue(response.getBody(), LottoDTO.class);
+            ultimiLotti = Collections.singletonList(lotto);
+            logger.info("Lotto aggiornato: {}", lotto.getId_lotto());
+        } else {
+            logger.error("Errore risposta API: {}", response.getStatusCode());
+            logger.error("Corpo risposta: {}", response.getBody());
+
+            // ✅ Se risposta negativa, prova a leggerne il messaggio
+            try {
+                JsonNode errorNode = objectMapper.readTree(response.getBody());
+                if (errorNode.has("message")) {
+                    logger.error("Messaggio di errore Enel: {}", errorNode.get("message").asText());
                 }
+            } catch (Exception ex) {
+                logger.warn("Impossibile leggere messaggio di errore dettagliato", ex);
             }
-    
-        } catch (Exception e) {
-            logger.error("Errore Lotto API: {}", e.getMessage(), e);
         }
-    
-        return ultimiLotti;
+    }
+    // ✅ Gestione errori HTTP 5xx e 4xx separata
+    catch (HttpServerErrorException e) {
+        logger.error("Errore 500 dal server Enel. Corpo risposta: {}", e.getResponseBodyAsString());
+        return Collections.emptyList();
+    } catch (HttpClientErrorException e) {
+        logger.error("Errore client ({}): {}", e.getStatusCode(), e.getResponseBodyAsString());
+        return Collections.emptyList();
+    } catch (Exception e) {
+        logger.error("Errore Lotto API: {}", e.getMessage(), e);
+        return Collections.emptyList();
+    }
+
+    return ultimiLotti;
 }
+
 
 
 
