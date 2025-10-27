@@ -50,20 +50,22 @@ public class LottoService {
         return headers;
     }
 
-     @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 60000)
     public List<LottoDTO> verificaLottiDisponibili() {
         try {
             String url = baseUrl + "/partner-api/v5/slices";
     
+            // ✅ ID numerico, non stringa
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("idCampagna", "65704 - RESELLER_LEAD_WIDGET"); // <-- intero e camelCase
-            requestBody.put("pageSize", 1);       // <-- nome campo coerente con API tipiche
+            requestBody.put("idCampagna", 65704);
+            requestBody.put("pageSize", 1);
     
             String jsonBody = objectMapper.writeValueAsString(requestBody);
             logger.info("JSON inviato: {}", jsonBody);
     
             HttpHeaders headers = getBearerAuthHeaders();
-            headers.set("Content-Type", "application/json;charset=UTF-8");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
     
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
     
@@ -80,6 +82,16 @@ public class LottoService {
             } else {
                 logger.error("Errore risposta API: {}", response.getStatusCode());
                 logger.error("Corpo risposta: {}", response.getBody());
+    
+                // ✅ Se risposta negativa, prova a leggerne il messaggio
+                try {
+                    JsonNode errorNode = objectMapper.readTree(response.getBody());
+                    if (errorNode.has("message")) {
+                        logger.error("Messaggio di errore Enel: {}", errorNode.get("message").asText());
+                    }
+                } catch (Exception ex) {
+                    logger.warn("Impossibile leggere messaggio di errore dettagliato", ex);
+                }
             }
     
         } catch (Exception e) {
@@ -87,7 +99,8 @@ public class LottoService {
         }
     
         return ultimiLotti;
-    }
+}
+
 
 
     // Scarica JSON di un lotto specifico
