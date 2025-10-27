@@ -58,13 +58,27 @@ public class LottoService {
             String url = baseUrl + "/partner-api/v5/slices";
             logger.info("Avvio verifica lotti disponibili chiamando: {}", url);
 
-            HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
+            // Preparo il body della richiesta con i parametri corretti
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("id_campagna", "65704"); // Sostituisci con valore reale
+            requestBody.put("size", 1); // Sostituisci con valore desiderato
 
-            ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+
+            // Preparo gli header con Authorization e Content-Type
+            HttpHeaders headers = getBearerAuthHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    new URI(url), HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                ultimiLotti = Arrays.asList(objectMapper.readValue(response.getBody(), LottoDTO[].class));
-                logger.info("Lotti aggiornati: {}", ultimiLotti.size());
+                // Deserializzo la risposta in LottoDTO
+                LottoDTO lotto = objectMapper.readValue(response.getBody(), LottoDTO.class);
+                ultimiLotti = Collections.singletonList(lotto);
+                logger.info("Lotto aggiornato: {}", lotto.getId_lotto());
             } else {
                 logger.error("Errore nella chiamata API esterna: {}", response.getStatusCode());
             }
