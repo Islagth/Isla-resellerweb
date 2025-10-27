@@ -11,6 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.net.URI;
 import java.util.*;
