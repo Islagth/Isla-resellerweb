@@ -1,6 +1,10 @@
 package com.example.enel_bitrix24_integration.service;
+import com.example.enel_bitrix24_integration.dto.CampaignDTO;
 import com.example.enel_bitrix24_integration.dto.LottoDTO;
+import com.example.enel_bitrix24_integration.dto.SliceRequest;
+import com.example.enel_bitrix24_integration.dto.SliceResponse;
 import com.example.enel_bitrix24_integration.security.TokenService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import org.slf4j.Logger;
@@ -9,11 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpClientErrorException;
-
+import org.springframework.web.client.RestTemplate;
 import java.net.URI;
 import java.util.*;
 
@@ -53,6 +54,66 @@ public class LottoService {
         return headers;
     }
 
+    public List<CampaignDTO> getCampaigns() {
+        String url = baseUrl + "/partner-api/v5/campaigns";
+        logger.info("Richiesta GET {}", url);
+
+        try {
+            HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
+            ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                List<CampaignDTO> campaigns = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+                logger.info("Campagne ricevute: {}", campaigns.size());
+                return campaigns;
+            } else {
+                logger.warn("Risposta non valida. Status: {}", response.getStatusCode());
+                return new ArrayList<>();
+            }
+        } catch (HttpClientErrorException.NotFound e) {
+            logger.error("Partner non trovato (404)");
+        } catch (Exception e) {
+            logger.error("Errore nel recupero campagne: {}", e.getMessage(), e);
+        }
+        return new ArrayList<>();
+    }
+
+
+    public SliceResponse requestLotto(int idCampagna, int size) {
+        String url = baseUrl + "/partner-api/v5/slices";
+        logger.info("Richiesta POST {} (id_campagna={}, size={})", url, idCampagna, size);
+
+        try {
+            SliceRequest sliceRequest = new SliceRequest();
+            sliceRequest.setId_campagna(idCampagna); // O usa @JsonProperty("id_campagna")
+            sliceRequest.setSize(size);
+
+            String jsonRequest = objectMapper.writeValueAsString(sliceRequest);
+            HttpEntity<String> entity = new HttpEntity<>(jsonRequest, getBearerAuthHeaders());
+
+            ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                SliceResponse sliceResponse = objectMapper.readValue(response.getBody(), SliceResponse.class);
+                logger.info("Lotto generato con successo: {}", sliceResponse.getId_lotto());
+                if (sliceResponse != null) {
+                    LottoDTO lottoDTO = new LottoDTO();
+                    lottoDTO.setId_lotto(String.valueOf(sliceResponse.getId_lotto()));
+                    ultimiLotti.add(lottoDTO);
+                }
+                return sliceResponse;
+            } else {
+                logger.warn("Risposta lotto non valida: {}", response.getStatusCode());
+            }
+        } catch (HttpClientErrorException e) {
+            logger.error("Errore HTTP richiesta lotto: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            logger.error("Errore generico richiesta lotto: {}", e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /*
     @Scheduled(fixedRate = 60000)
     public List<LottoDTO> verificaLottiDisponibili() {
         try {
@@ -73,9 +134,7 @@ public class LottoService {
             logger.error("Errore durante aggiornamento lotti: {}", e.getMessage(), e);
         }
         return ultimiLotti;
-    }
-
-
+    } */
 
 
     // Scarica JSON di un lotto specifico
