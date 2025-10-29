@@ -26,15 +26,17 @@ public class ContactService {
 
     private final RestTemplate restTemplate;
     private final String baseUrl;
+    private final String webHookUrl;
     private final LottoService lottoService;
     private final ObjectMapper objectMapper;
 
     // Cache in memoria dell'ultimo stato noto (in produzione -> Redis o DB)
     private final Map<Long, ContactDTO> cacheContatti = new ConcurrentHashMap<>();
 
-    public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, LottoService lottoService, ObjectMapper objectMapper) {
+    public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl,@Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
+        this.webHookUrl = webHookUrl;
         this.lottoService = lottoService;
         this.objectMapper = objectMapper;
     }
@@ -42,7 +44,7 @@ public class ContactService {
     // ----------------- CREAZIONE CONTATTO -----------------
     public String creaContatto(ContactDTO contactDTO) throws Exception {
         logger.info("Avvio creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME());
-        String url = baseUrl + "/rest/crm.contact.add";
+          String url = webHookUrl + "/crm.contact.add";
         Map<String, Object> fields = objectMapper.convertValue(contactDTO, new TypeReference<Map<String, Object>>() {});
         Map<String, Object> payload = new HashMap<>();
         payload.put("fields", fields);
@@ -80,7 +82,7 @@ public class ContactService {
     // ----------------- AGGIORNAMENTO CONTATTO -----------------
     public String aggiornaContatto(int contactId, Map<String, Object> fields, Map<String, Object> params) throws Exception {
         logger.info("Avvio aggiornamento contatto ID: {}", contactId);
-        String url = baseUrl + "/rest/crm.contact.update";
+        String url =  webHookUrl  + "/crm.contact.update";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
@@ -134,7 +136,7 @@ public class ContactService {
     // ----------------- ELIMINAZIONE CONTATTO -----------------
     public boolean eliminaContatto(int contactId) throws Exception {
         logger.info("Avvio eliminazione contatto ID: {}", contactId);
-        String url = baseUrl + "/rest/crm.contact.delete";
+       String url =  webHookUrl  + "/crm.contact.delete";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
