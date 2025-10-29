@@ -83,6 +83,9 @@ public class LottoService {
         String url = baseUrl + "/partner-api/v5/slices";
         try {
             SliceRequest lottoRequest = new SliceRequest();
+            SliceRequest lottoRequest = new SliceRequest();
+            lottoRequest.setId_campagna(id_Campagna);
+            lottoRequest.setSize(size);
             String jsonRequest = objectMapper.writeValueAsString(lottoRequest);
 
             HttpHeaders headers = getBearerAuthHeaders();
