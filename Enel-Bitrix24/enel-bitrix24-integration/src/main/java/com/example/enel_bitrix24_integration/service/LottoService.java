@@ -82,7 +82,7 @@ public class LottoService {
      public SliceResponse requestLotto(int id_Campagna, int size) {
         String url = baseUrl + "/partner-api/v5/slices";
         try {
-            SliceRequest lottoRequest = new SliceRequest();
+           
             SliceRequest lottoRequest = new SliceRequest();
             lottoRequest.setId_campagna(id_Campagna);
             lottoRequest.setSize(size);
