@@ -79,31 +79,26 @@ public class LottoService {
     }
 
 
-    public SliceResponse requestLotto(int idCampagna, int size) {
+     public SliceResponse requestLotto(int id_Campagna, int size) {
         String url = baseUrl + "/partner-api/v5/slices";
-        logger.info("Richiesta POST {} (id_campagna={}, size={})", url, idCampagna, size);
-
         try {
-            SliceRequest sliceRequest = new SliceRequest();
-            sliceRequest.setId_campagna(idCampagna); // O usa @JsonProperty("id_campagna")
-            sliceRequest.setSize(size);
+            SliceRequest lottoRequest = new SliceRequest();
+            String jsonRequest = objectMapper.writeValueAsString(lottoRequest);
 
-            String jsonRequest = objectMapper.writeValueAsString(sliceRequest);
-            HttpEntity<String> entity = new HttpEntity<>(jsonRequest, getBearerAuthHeaders());
+            HttpHeaders headers = getBearerAuthHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
-            ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.POST, entity, String.class);
+            HttpEntity<String> entity = new HttpEntity<>(jsonRequest, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    new URI(url), HttpMethod.POST, entity, String.class
+            );
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                SliceResponse sliceResponse = objectMapper.readValue(response.getBody(), SliceResponse.class);
-                logger.info("Lotto generato con successo: {}", sliceResponse.getId_lotto());
-                if (sliceResponse != null) {
-                    LottoDTO lottoDTO = new LottoDTO();
-                    lottoDTO.setId_lotto(String.valueOf(sliceResponse.getId_lotto()));
-                    ultimiLotti.add(lottoDTO);
-                }
-                return sliceResponse;
+                return objectMapper.readValue(response.getBody(), SliceResponse.class);
             } else {
-                logger.warn("Risposta lotto non valida: {}", response.getStatusCode());
+                logger.error("Errore nella risposta HTTP: {}", response.getStatusCode());
             }
         } catch (HttpClientErrorException e) {
             logger.error("Errore HTTP richiesta lotto: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
