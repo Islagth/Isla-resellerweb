@@ -15,15 +15,17 @@ import java.util.*;
 @Service
 public class DealService {
 
-    private final RestTemplate restTemplate;
+     private final RestTemplate restTemplate;
     private final String baseUrl;
+    private final String  webHookUrl;
     private final ObjectMapper objectMapper;
 
     private static final Logger logger = LoggerFactory.getLogger(DealService.class);
 
-    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, ObjectMapper objectMapper) {
+    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl,@Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
+        this.webHookUrl = webHookUrl;
         this.objectMapper = objectMapper;
     }
 
@@ -45,7 +47,7 @@ public class DealService {
     // Creazione singolo deal
     public Integer addDeal(DealDTO dto, Map<String, Object> params) {
         logger.info("Avvio creazione deal con titolo: {}", dto.getTitle());
-        String url = baseUrl + "/rest/crm.deal.add";
+        String url = webHookUrl +  "/crm.deal.add";
         Map<String, Object> fields = convertDtoToFields(dto);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -71,7 +73,7 @@ public class DealService {
             throw new IllegalArgumentException("ID del deal deve essere valido per l’update");
         }
         logger.info("Avvio aggiornamento deal ID: {}", dto.getId());
-        String url = baseUrl + "/rest/crm.deal.update";
+        String url = webHookUrl + "/crm.deal.update";
 
         Map<String, Object> fields = convertDtoToFields(dto);
 
@@ -153,7 +155,7 @@ public class DealService {
             throw new IllegalArgumentException("ID del deal deve essere valido e positivo");
         }
         logger.info("Avvio cancellazione deal ID: {}", id);
-        String url = baseUrl + "/rest/crm.deal.delete";
+        String url = webHookUrl +  "/crm.deal.delete";
 
         Map<String, Object> requestBody = Collections.singletonMap("ID", id);
 
