@@ -345,7 +345,7 @@ public class ContactService {
     }
 
 
-    public List<LeadRequest> trovaContattiModificati() {
+   public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
 
         try {
@@ -359,7 +359,7 @@ public class ContactService {
             List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
 
             for (Map<String, Object> contattoMap : lista) {
-                Long id = Long.parseLong(contattoMap.get("ID").toString());
+                Integer id = (Integer) contattoMap.get("ID");
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
 
                 ContactDTO nuovo = new ContactDTO();
@@ -390,14 +390,14 @@ public class ContactService {
 
                 if (modificato) {
                     LeadRequest req = new LeadRequest();
-                    req.setContactId(id);
+                    req.setContactId(Long.valueOf(id));
                     req.setWorkedCode("CONTACT-" + id);
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
 
                     modificati.add(req);
-                    cacheContatti.put(id, nuovo);
+                    cacheContatti.put(Long.valueOf(id), nuovo);
                 }
             }
         } catch (Exception e) {
@@ -406,7 +406,6 @@ public class ContactService {
 
         return modificati;
     }
-
 }
 
 
