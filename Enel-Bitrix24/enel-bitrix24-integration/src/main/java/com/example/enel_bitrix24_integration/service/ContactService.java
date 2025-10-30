@@ -101,7 +101,7 @@ public class ContactService {
     // ----------------- GET CONTATTO PER ID -----------------
     public Map<String, Object> getContattoById(int contactId) throws Exception {
         logger.info("Recupero contatto per ID: {}", contactId);
-        String url = baseUrl + "rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
+        String url = baseUrl + "/rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
@@ -114,7 +114,7 @@ public class ContactService {
     // ----------------- LISTA CONTATTO -----------------
     public Map<String, Object> listaContatti(Map<String, Object> filter, Map<String, String> order, List<String> select, Integer start) throws Exception {
         logger.info("Richiesta lista contatti");
-        String url = baseUrl + "rest/9/1varqs6u91afcteh/crm.contact.list.json";
+        String url = baseUrl + "/rest/9/1varqs6u91afcteh/crm.contact.list.json";
 
         Map<String, Object> payload = new HashMap<>();
         if (filter != null) {
@@ -257,7 +257,7 @@ public class ContactService {
      */
     public List<Map<String, Object>> listaCustomFields() {
         try {
-            String url =  baseUrl + "rest/9/nmvjjijpb9vit7my/crm.contact.userfield.list.json";
+            String url =  baseUrl + "/rest/9/nmvjjijpb9vit7my/crm.contact.userfield.list.json";
 
             // Corpo della richiesta (nessun filtro, restituisce tutti i campi)
             Map<String, Object> requestBody = new HashMap<>();
