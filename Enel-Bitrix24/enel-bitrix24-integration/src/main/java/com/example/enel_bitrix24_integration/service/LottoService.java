@@ -54,6 +54,7 @@ public class LottoService {
         return headers;
     }
 
+    /*
     public List<CampaignDTO> getCampaigns() {
         String url = baseUrl + "/partner-api/v5/campaigns";
         logger.info("Richiesta GET {}", url);
@@ -109,9 +110,9 @@ public class LottoService {
             logger.error("Errore generico richiesta lotto: {}", e.getMessage(), e);
         }
         return null;
-    }
+    } */
 
-    /*
+    
     @Scheduled(fixedRate = 60000)
     public List<LottoDTO> verificaLottiDisponibili() {
         try {
@@ -132,7 +133,7 @@ public class LottoService {
             logger.error("Errore durante aggiornamento lotti: {}", e.getMessage(), e);
         }
         return ultimiLotti;
-    } */
+    } 
 
 
     // Scarica JSON di un lotto specifico
