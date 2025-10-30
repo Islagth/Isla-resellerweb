@@ -31,7 +31,7 @@ public class DealService {
 
     // ----------------- CREAZIONE DEAL -----------------
 // Crea deal da JSON del lotto
-    public void creaDealDaLotto(String idLotto, String json) throws Exception {
+ public List<Integer> creaDealDaLotto(String idLotto, String json) throws Exception {
         logger.info("Avvio creazione deal da lotto id: {}", idLotto);
 
         List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
@@ -42,6 +42,7 @@ public class DealService {
                 logger.error("Errore creazione deal: {}", dto.getTitle(), e);
             }
         }
+        return null;
     }
 
     // Creazione singolo deal
