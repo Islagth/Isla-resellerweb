@@ -410,11 +410,11 @@ public class ContactService {
 
                  if (modificato) {
                     LeadRequest req = new LeadRequest();
-                    req.setContactId(Long.valueOf(id));
+                    req.setContactId(Long.valueOf(nuovo.getNAME()));
                     // Estrai il telefono dal ContactDTO
                     List<ContactDTO.MultiField> telefoni = nuovo.getPHONE();
                     String telefonoPrincipale = (telefoni != null && !telefoni.isEmpty()) ? telefoni.get(0).getVALUE() : null;
-                    req.setWorkedCode(telefonoPrincipale != null ? telefonoPrincipale : "CONTACT-" + id);
+                    req.setWorkedCode(telefonoPrincipale != null ? telefonoPrincipale : nuovo.getPHONE().toString());
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
