@@ -146,11 +146,11 @@ public class BitrixController {
     }
 
     // Cancellazione contatto
-    @DeleteMapping("/api/enel-leads/delete-contact/{id}")
-    public ResponseEntity<?> eliminaContatto(@PathVariable int id) {
+   @DeleteMapping("/api/enel-leads/delete-contact/{id}")
+    public ResponseEntity<?> eliminaContatto(@PathVariable int id,String phone) {
         logger.info("Ricevuta richiesta eliminaContatto per id: {}", id);
         try {
-            boolean deleted = contactService.eliminaContatto(id);
+            boolean deleted = contactService.eliminaContatto(id,phone);
             logger.info("Eliminazione contatto ID {} risultato: {}", id, deleted);
             if (deleted) {
                 return ResponseEntity.ok("Contatto eliminato con successo.");
@@ -163,6 +163,7 @@ public class BitrixController {
             return buildErrorResponse("Errore eliminazione contatto", e);
         }
     }
+
 
     private ResponseEntity<String> buildErrorResponse(String message, Exception e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
