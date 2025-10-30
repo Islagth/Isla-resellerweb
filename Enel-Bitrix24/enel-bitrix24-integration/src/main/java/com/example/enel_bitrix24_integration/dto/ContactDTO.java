@@ -37,6 +37,7 @@ public class ContactDTO {
     private List<MultiField> IM;              // Messengers
     private List<MultiField> LINK;            // Links (service field)
     private Map<String, Object> UF;          // Custom fields UF_CRM_...
+    private String RESULT_CODE;                //Custom field per l'esito
     // Relationship fields PARENT_ID_xxx are omitted for brevity (can be added as Map<String,Object> if needed)
 
     // Import related fields (available when IMPORT = 'Y' in params)
@@ -46,7 +47,7 @@ public class ContactDTO {
     private Integer MODIFY_BY_ID;
 
     // Inner static class for multifield entries like PHONE, EMAIL
-
+    @Data
     public static class MultiField {
         private String VALUE;
         private String VALUE_TYPE;
