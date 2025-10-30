@@ -297,7 +297,7 @@ public class ContactService {
      * Recupera il valore del campo custom 'UF_CRM_RESULT_CODE' per un contatto
      * in modo dinamico usando l'ID del campo ottenuto da crm.contact.userfield.list
      */
-    public String getResultCodeForContact(Long contactId) {
+    public String getResultCodeForContact(Integer contactId) {
         try {
             // 🔹 Recupera la lista dei custom field dei contatti
             Map<String, Object> userFieldsResponse = (Map<String, Object>) listaCustomFields();
@@ -306,11 +306,11 @@ public class ContactService {
             // 🔹 Trova l'ID del campo 'UF_CRM_RESULT_CODE'
             Optional<Map<String, Object>> campoResultCodeOpt = userFieldsResponse.entrySet().stream()
                     .map(e -> (Map<String, Object>) e.getValue())
-                    .filter(f -> "UF_CRM_RESULT_CODE".equals(f.get("FIELD_NAME")))
+                    .filter(f -> "RESULT_CODE".equals(f.get("FIELD_NAME")))
                     .findFirst();
 
             if (campoResultCodeOpt.isEmpty()) {
-                logger.warn("Custom field UF_CRM_RESULT_CODE non trovato");
+                logger.warn("Custom field RESULT_CODE non trovato");
                 return null;
             }
 
@@ -338,7 +338,7 @@ public class ContactService {
                 }
             }
         } catch (Exception e) {
-            logger.warn("Errore durante il recupero di UF_CRM_RESULT_CODE per contatto {}: {}", contactId, e.getMessage());
+            logger.warn("Errore durante il recupero di RESULT_CODE per contatto {}: {}", contactId, e.getMessage());
         }
 
         return null;
