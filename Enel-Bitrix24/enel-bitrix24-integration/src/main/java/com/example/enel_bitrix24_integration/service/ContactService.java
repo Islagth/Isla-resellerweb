@@ -193,7 +193,7 @@ public class ContactService {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
 
         // 3️⃣ URL completo del metodo Bitrix
-        String url = webHookUrl + "rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
+        String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
 
         try {
             // 4️⃣ Chiamata REST
