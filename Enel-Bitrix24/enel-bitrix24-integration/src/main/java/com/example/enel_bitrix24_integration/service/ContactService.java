@@ -48,9 +48,16 @@ public class ContactService {
         String url = webHookUrl + "/crm.contact.add";
 
         Map<String, Object> fields = objectMapper.convertValue(contactDTO, new TypeReference<Map<String, Object>>() {});
-        
-        if (fields.get("PHONE") instanceof String) {
-            String phoneValue = (String) fields.get("PHONE");
+
+        // Assegna il campo ID_ANAGRAFICA al nome di contactDTO se presente
+        if (fields.get("ID_ANAGRAFICA") != null) {
+            String idAnagrafica = fields.get("ID_ANAGRAFICA").toString();
+            contactDTO.setNAME(idAnagrafica); // o contactDTO.setNome(idAnagrafica); in base al nome del metodo
+            fields.put("NAME", idAnagrafica); // Aggiorna anche la mappa fields se necessario
+        }
+
+        if (fields.get("TELEFONO") instanceof String) {
+            String phoneValue = (String) fields.get("TELEFONO");
             List<Map<String, Object>> phones = new ArrayList<>();
             Map<String, Object> phoneMap = new HashMap<>();
             phoneMap.put("VALUE", phoneValue);
@@ -58,7 +65,6 @@ public class ContactService {
             phones.add(phoneMap);
             fields.put("PHONE", phones);
         }
-
         Map<String, Object> payload = Map.of("fields", fields);
 
         logger.debug("Payload inviato a Bitrix24: {}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload));
@@ -68,6 +74,7 @@ public class ContactService {
         return result;
     }
 
+    
     // Crea contatti da JSON del lotto
     public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exception {
         logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
