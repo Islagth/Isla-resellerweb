@@ -8,7 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LottoScheduler {
@@ -33,25 +35,36 @@ public class LottoScheduler {
     @Scheduled(fixedRate = 60000)
     public void processaTuttiILotti() {
         try {
+            // Recupera i lotti disponibili
             List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
-            if (lottiDisponibili == null || lottiDisponibili.isEmpty()) return;
+            if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
+                logger.info("Nessun lotto disponibile da processare.");
+                return;
+            }
 
             for (LottoDTO lotto : lottiDisponibili) {
                 String idLotto = lotto.getId_lotto();
                 try {
+                    // Scarica il lotto in formato JSON
                     String json = lottoService.scaricaLottoJson(idLotto);
 
-                    // 1️⃣ Crea contatti e ottieni ID
-                    List<Integer> contactIds = contactService.creaContattiDaLotto(idLotto, json);
+                    // 1️⃣ Crea contatti e ottieni ID (sicuro da null)
+                    List<Integer> contactIds = Optional.ofNullable(contactService.creaContattiDaLotto(idLotto, json))
+                            .orElse(Collections.emptyList());
 
-                    // 2️⃣ Crea deal e ottieni ID
-                    List<Integer> dealIds = dealService.creaDealDaLotto(idLotto, json);
+                    // 2️⃣ Crea deal e ottieni ID (sicuro da null)
+                    List<Integer> dealIds = Optional.ofNullable(dealService.creaDealDaLotto(idLotto, json))
+                            .orElse(Collections.emptyList());
 
-                    // 3️⃣ Collega contatti e deal
-                    for (Integer dealId : dealIds) {
-                        for (Integer contactId : contactIds) {
-                            contactService.linkContactToDeal(dealId, contactId);
+                    // 3️⃣ Collega contatti e deal solo se entrambe le liste non sono vuote
+                    if (!dealIds.isEmpty() && !contactIds.isEmpty()) {
+                        for (Integer dealId : dealIds) {
+                            for (Integer contactId : contactIds) {
+                                contactService.linkContactToDeal(dealId, contactId);
+                            }
                         }
+                    } else {
+                        logger.warn("Lotto {}: nessun deal o contatto da collegare.", idLotto);
                     }
 
                     logger.info("Lotto {} elaborato correttamente. Creati {} contatti e {} deal.",
@@ -68,6 +81,7 @@ public class LottoScheduler {
 
 
 }
+
 
 
 
