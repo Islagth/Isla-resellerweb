@@ -21,12 +21,22 @@ public enum ResultCode {
     S003("WIP - Appuntamento Generico"),
     S004("WIP - Appuntamento Personale"),
     S001("WIP - Non Risponde / Occupato"),
-    S002("WIP - Segreteria / Fax");
+    S002("WIP - Segreteria / Fax"),
+    UNKNOWN("nullo");
 
     private String esito;
 
     ResultCode(String esito) {
         this.esito = esito;
+    }
+
+    public static ResultCode fromString(String value) {
+        if (value == null) return ResultCode.UNKNOWN;
+        try {
+            return ResultCode.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResultCode.UNKNOWN;
+        }
     }
 
     public String getEsito() {
