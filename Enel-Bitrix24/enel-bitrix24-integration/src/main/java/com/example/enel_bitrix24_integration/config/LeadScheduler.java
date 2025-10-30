@@ -38,16 +38,17 @@ public class LeadScheduler {
     /**
      * 🔄 Controlla ogni 15 minuti se ci sono contatti modificati in Bitrix
      */
-    @Scheduled(cron = "0 */15 * * * ?") // ogni 15 minuti
+    @Scheduled(cron = "0 */15 * * * ?")
     public void controllaModificheContatti() {
         try {
             List<LeadRequest> contattiModificati = contactService.trovaContattiModificati();
             if (contattiModificati.isEmpty()) {
-                logger.info("Nessun contatto modificato trovato nell'ultimo ciclo");
+                logger.info("Nessun contatto modificato nell’ultimo ciclo");
                 return;
             }
+
             contattiInAttesa.addAll(contattiModificati);
-            logger.info("Aggiunti {} contatti modificati alla lista d'invio", contattiModificati.size());
+            logger.info("Aggiunti {} contatti modificati alla lista contattiInAttesa", contattiModificati.size());
         } catch (Exception e) {
             logger.error("Errore durante il controllo dei contatti modificati", e);
         }
