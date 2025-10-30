@@ -27,6 +27,7 @@ public class LottoScheduler {
         this.dealService = dealService;
     }
 
+    /*
         @Scheduled(fixedRate = 60000)
     public void processaTuttiILotti() {
         logger.info("Avvio scheduler: elaborazione automatica lotti in corso...");
@@ -75,9 +76,9 @@ public class LottoScheduler {
 
         logger.info("✅ Scheduler completato: elaborazione lotti terminata.");
     }
-    
+    */
 
-        /*
+        
         @Scheduled(fixedRate = 60000)
         public void processaTuttiILotti() {
             try {
@@ -97,7 +98,8 @@ public class LottoScheduler {
             } catch (Exception e) {
                 logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
             }
-        } */
+        } 
 }
+
 
 
