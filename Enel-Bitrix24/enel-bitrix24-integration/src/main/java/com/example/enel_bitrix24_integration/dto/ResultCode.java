@@ -3,25 +3,24 @@ package com.example.enel_bitrix24_integration.dto;
 public enum ResultCode {
 
     // KO
-    S109("KO - Gia' contattato"),
-    S106("KO - Ha cambiato da poco"),
-    S103("KO - Migliori opportunita' dal competitor"),
-    S102("KO - Non Interessato"),
-    S105("KO - Numero Inesistente (Occupato Veloce)"),
-    S104("KO - Opposizione chiamate commerciali"),
-    S101("KO - Rifiuta Dialogo"),
-    S107("KO - Titolare della fornitura non disponibile"),
-    S108("KO - Vendita ingannevole da Enel"),
+    D109("KO - Gia' contattato"),
+    D106("KO - Ha cambiato da poco"),
+    D103("KO - Migliori opportunita' dal competitor"),
+    D102("KO - Non interessato"),
+    D105("KO - Numero inesistente (Occupato Veloce)"),
+    D101("KO - Rifiuta dialogo"),
+    D107("KO - Titolare della fornitura non disponibile"),
+    D108("KO - Vendita ingannevole da Enel"),
 
     // OK
-    S202("OK - Accetta l'offerta, Attiva in Negozio"),
-    S201("OK - Accetta l'offerta con attivazione a distanza"),
+    D201("OK - Accetta l'offerta con attivazione a distanza"),
 
     // WIP
-    S003("WIP - Appuntamento Generico"),
-    S004("WIP - Appuntamento Personale"),
-    S001("WIP - Non Risponde / Occupato"),
-    S002("WIP - Segreteria / Fax"),
+    D003("WIP - Appuntamento Generico"),
+    D004("WIP - Appuntamento Personale"),
+    D010("WIP - Chiamata muta"),
+    D001("WIP - Non Risponde / Occupato"),
+    D002("WIP - Segreteria / Fax"),
     UNKNOWN("nullo");
 
     private String esito;
