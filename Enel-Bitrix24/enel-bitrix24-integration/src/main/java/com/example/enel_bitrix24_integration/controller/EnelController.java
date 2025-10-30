@@ -66,7 +66,7 @@ public class EnelController {
         }
     }
 
-    /*
+    
     //Richiesta lista lotti da scaricare
     @GetMapping("/ultimi")
     public ResponseEntity<?> getUltimiLotti(
@@ -80,7 +80,7 @@ public class EnelController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(lotti);
-    } */
+    } 
 
 
     // Scarica lotto JSON → restituisce il contenuto
