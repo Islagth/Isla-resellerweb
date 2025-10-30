@@ -78,7 +78,7 @@ public class ContactService {
         if (!errori.isEmpty()) {
             throw new RuntimeException("Alcuni contatti non sono stati creati: " + String.join("; ", errori));
         }
-        return null;
+        return contatti;
     }
 
     // ----------------- AGGIORNAMENTO CONTATTO -----------------
