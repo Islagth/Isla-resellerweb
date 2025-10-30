@@ -44,11 +44,24 @@ public class ContactService {
 
     // ----------------- CREAZIONE CONTATTO -----------------
     public String creaContatto(ContactDTO contactDTO) throws Exception {
-        logger.info("Avvio creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME());
+        logger.info("Avvio creazione contatto: {} {}");
         String url = webHookUrl + "/crm.contact.add";
+
         Map<String, Object> fields = objectMapper.convertValue(contactDTO, new TypeReference<Map<String, Object>>() {});
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("fields", fields);
+        
+        if (fields.get("PHONE") instanceof String) {
+            String phoneValue = (String) fields.get("PHONE");
+            List<Map<String, Object>> phones = new ArrayList<>();
+            Map<String, Object> phoneMap = new HashMap<>();
+            phoneMap.put("VALUE", phoneValue);
+            phoneMap.put("VALUE_TYPE", "WORK");
+            phones.add(phoneMap);
+            fields.put("PHONE", phones);
+        }
+
+        Map<String, Object> payload = Map.of("fields", fields);
+
+        logger.debug("Payload inviato a Bitrix24: {}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload));
 
         String result = postForResultString(url, payload, "creazione contatto");
         logger.info("Creazione contatto completata: {}", result);
@@ -388,10 +401,13 @@ public class ContactService {
                     modificato = dataDiversa || campoDiverso;
                 }
 
-                if (modificato) {
+                 if (modificato) {
                     LeadRequest req = new LeadRequest();
                     req.setContactId(Long.valueOf(id));
-                    req.setWorkedCode("CONTACT-" + id);
+                    // Estrai il telefono dal ContactDTO
+                    List<ContactDTO.MultiField> telefoni = nuovo.getPHONE();
+                    String telefonoPrincipale = (telefoni != null && !telefoni.isEmpty()) ? telefoni.get(0).getVALUE() : null;
+                    req.setWorkedCode(telefonoPrincipale != null ? telefonoPrincipale : "CONTACT-" + id);
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
