@@ -379,7 +379,14 @@ public class ContactService {
             List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
 
             for (Map<String, Object> contattoMap : lista) {
-                Integer id = (Integer) contattoMap.get("ID");
+                Integer id = null;
+                try {
+                    id = Integer.valueOf(String.valueOf(contattoMap.get("ID")));
+                } catch (NumberFormatException e) {
+                    logger.warn("ID non valido per contatto: {}", contattoMap.get("ID"));
+                    continue;
+                }
+
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
 
                 ContactDTO nuovo = new ContactDTO();
@@ -391,6 +398,7 @@ public class ContactService {
                     logger.warn("Formato data non valido per contatto {}: {}", id, dateModify);
                     continue;
                 }
+            }
 
                 // 🔹 Recupera il valore corrente del campo custom UF_CRM_RESULT_CODE
                 String resultCodeValue = getResultCodeForContact(id);
