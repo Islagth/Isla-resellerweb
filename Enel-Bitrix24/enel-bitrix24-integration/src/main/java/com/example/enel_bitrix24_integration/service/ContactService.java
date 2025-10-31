@@ -372,8 +372,12 @@ public class ContactService {
             // Recupera contatti attivi tramite il metodo esistente
             Map<String, Object> filter = new HashMap<>();
             filter.put("ACTIVE", "Y");
-            Map<String, Object> result = listaContatti(filter, null,
-                    List.of("ID", "NAME", "DATE_MODIFY"), 0);
+            Map<String, Object> result = listaContatti(
+                    filter,
+                    null,
+                    List.of("ID", "NAME", "DATE_MODIFY"),
+                    0
+            );
 
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
@@ -398,7 +402,6 @@ public class ContactService {
                     logger.warn("Formato data non valido per contatto {}: {}", id, dateModify);
                     continue;
                 }
-            }
 
                 // 🔹 Recupera il valore corrente del campo custom UF_CRM_RESULT_CODE
                 String resultCodeValue = getResultCodeForContact(id);
@@ -416,13 +419,23 @@ public class ContactService {
                     modificato = dataDiversa || campoDiverso;
                 }
 
-                 if (modificato) {
+                if (modificato) {
                     LeadRequest req = new LeadRequest();
-                    req.setContactId(Long.valueOf(nuovo.getNAME()));
-                    // Estrai il telefono dal ContactDTO
+
+                    // Imposta ID contatto e nome
+                    req.setContactId(Long.valueOf(id));
+
+                    // Estrai il telefono principale dal ContactDTO
                     List<ContactDTO.MultiField> telefoni = nuovo.getPHONE();
-                    String telefonoPrincipale = (telefoni != null && !telefoni.isEmpty()) ? telefoni.get(0).getVALUE() : null;
-                    req.setWorkedCode(telefonoPrincipale != null ? telefonoPrincipale : nuovo.getPHONE().toString());
+                    String telefonoPrincipale = (telefoni != null && !telefoni.isEmpty())
+                            ? telefoni.get(0).getVALUE()
+                            : null;
+
+                    req.setWorkedCode(
+                            telefonoPrincipale != null
+                                    ? telefonoPrincipale
+                                    : (nuovo.getPHONE() != null ? nuovo.getPHONE().toString() : null)
+                    );
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
