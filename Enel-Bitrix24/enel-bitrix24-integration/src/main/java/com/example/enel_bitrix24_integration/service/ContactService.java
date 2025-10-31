@@ -53,7 +53,7 @@ public class ContactService {
         if (fields.get("ID_ANAGRAFICA") != null) {
             String idAnagrafica = fields.get("ID_ANAGRAFICA").toString();
             contactDTO.setNAME(idAnagrafica); // o contactDTO.setNome(idAnagrafica); in base al nome del metodo
-            fields.put("NAME", idAnagrafica); // Aggiorna anche la mappa fields se necessario
+            fields.put("NOME", idAnagrafica); // Aggiorna anche la mappa fields se necessario
         }
 
         if (fields.get("TELEFONO") instanceof String) {
@@ -63,7 +63,7 @@ public class ContactService {
             phoneMap.put("VALUE", phoneValue);
             phoneMap.put("VALUE_TYPE", "WORK");
             phones.add(phoneMap);
-            fields.put("PHONE", phones);
+            fields.put("TELEFONO", phones);
         }
         Map<String, Object> payload = Map.of("fields", fields);
 
@@ -175,48 +175,51 @@ public class ContactService {
     }
 
     //--------------------CONNETTI CONTATTO CON DEAL----------------------
-    public void linkContactToDeal(Integer dealId, Integer contactId) {
-        logger.info("Inizio collegamento link contatto ID: {}, dealId: {}", contactId, dealId);
-        // 1️⃣ Prepara il payload JSON
-        Map<String, Object> fields = new HashMap<>();
-        fields.put("CONTACT_ID", contactId);
-        fields.put("SORT", 100);
-        fields.put("IS_PRIMARY", "Y");
+  public void linkContactToDeal(Integer dealId, Integer contactId) {
+    logger.info("Inizio collegamento contatto {} al deal {}", contactId, dealId);
 
-        Map<String, Object> params = new HashMap<>();
-        params.put("id", dealId);
-        params.put("fields", fields);
+    Map<String, Object> fields = new HashMap<>();
+    fields.put("CONTACT_ID", contactId);
+    fields.put("SORT", 100);
+    fields.put("IS_PRIMARY", "Y");
 
-        // 2️⃣ Costruisci la richiesta HTTP
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
+    Map<String, Object> params = new HashMap<>();
+    params.put("id", dealId);
+    params.put("fields", fields);
 
-        // 3️⃣ URL completo del metodo Bitrix
-        String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
 
-        try {
-            // 4️⃣ Chiamata REST
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+    // URL completo Bitrix — attenzione all'ID utente e token nel webhook
+    String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
 
-            // 5️⃣ Gestione della risposta
-            Map<String, Object> body = response.getBody();
-            if (body == null) {
-                throw new RuntimeException("Risposta vuota da Bitrix durante il collegamento contatto-deal");
-            }
+    try {
+        logger.debug("➡️  Invio richiesta a Bitrix: {}", url);
+        logger.debug("➡️  Payload JSON: {}", new ObjectMapper().writeValueAsString(params));
 
-            if (body.containsKey("error")) {
-                String error = (String) body.get("error");
-                String errorDescription = (String) body.get("error_description");
-                throw new RuntimeException("Errore Bitrix [" + error + "]: " + errorDescription);
-            }
+        ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+        Map<String, Object> body = response.getBody();
 
-            logger.info("✅ Collegato contatto %d al deal %d%n, contactId, dealId");
+        logger.debug("⬅️  Risposta Bitrix: {}", body);
 
-        } catch (Exception e) {
-            throw new RuntimeException("Errore nella chiamata REST per collegare il contatto al deal: " + e.getMessage(), e);
+        if (body == null) {
+            throw new RuntimeException("Risposta vuota da Bitrix durante il collegamento contatto-deal");
         }
+
+        if (body.containsKey("error")) {
+            String error = (String) body.get("error");
+            String errorDescription = (String) body.get("error_description");
+            throw new RuntimeException("Errore Bitrix [" + error + "]: " + errorDescription);
+        }
+
+        logger.info("✅ Collegato contatto {} al deal {}", contactId, dealId);
+
+    } catch (Exception e) {
+        logger.error("❌ Errore durante il collegamento contatto {} → deal {}: {}", contactId, dealId, e.getMessage(), e);
+        throw new RuntimeException("Errore nella chiamata REST per collegare il contatto al deal: " + e.getMessage(), e);
     }
+}
 
     // Metodo privato per chiamate POST che restituiscono stringa (messaggi di successo)
     private String postForResultString(String url, Map<String, Object> payload, String actionDescription) throws Exception {
