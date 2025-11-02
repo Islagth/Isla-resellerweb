@@ -196,7 +196,7 @@ public class DealService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
 
-        String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
+        String url = webHookUrl + "/crm.deal.contact.add.json";
 
         try {
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
