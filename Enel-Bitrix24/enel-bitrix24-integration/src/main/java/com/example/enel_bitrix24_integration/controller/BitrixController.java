@@ -31,15 +31,24 @@ public class BitrixController {
 
 
 
+  
     // Aggiungi Deal
     @PostMapping("/api/enel-leads/add-Deal")
     public ResponseEntity<?> createDeal(@RequestBody DealDTO dealDTO,
                                         @RequestParam(required = false) Map<String, Object> params) {
         logger.info("Ricevuta richiesta createDeal con dati: {}", dealDTO);
-        Integer dealId = dealService.addDeal(dealDTO, params);
-        logger.info("Deal creato con ID: {}", dealId);
-        return ResponseEntity.ok(Map.of("dealId", dealId));
+    
+        try {
+            Integer dealId = dealService.addDeal(dealDTO, params);
+            logger.info("✅ Deal creato con ID: {}", dealId);
+            return ResponseEntity.ok(Map.of("dealId", dealId));
+        } catch (Exception e) {
+            logger.error("❌ Errore durante la creazione del deal: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
 
     // Modifica Deal
     @PutMapping("/api/enel-leads/update-Deal")
