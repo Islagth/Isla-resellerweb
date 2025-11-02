@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -38,50 +39,69 @@ public class LottoScheduler {
             // Recupera i lotti disponibili
             List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
             if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
-                logger.info("Nessun lotto disponibile da processare.");
+                logger.info("⏳ Nessun lotto disponibile da processare.");
                 return;
             }
 
             for (LottoDTO lotto : lottiDisponibili) {
                 String idLotto = lotto.getId_lotto();
+                logger.info("🚀 Inizio elaborazione lotto {}", idLotto);
+
                 try {
                     // Scarica il lotto in formato JSON
                     String json = lottoService.scaricaLottoJson(idLotto);
+                    logger.debug("📥 JSON ricevuto per lotto {}: {}", idLotto, json);
 
-                    // 1️⃣ Crea contatti e ottieni ID (sicuro da null)
-                    List<Integer> contactIds = Optional.ofNullable(contactService.creaContattiDaLotto(idLotto, json))
-                            .orElse(Collections.emptyList());
+                    // 1️⃣ Crea contatti (ritorna mappa idAnagrafica → contactId)
+                    List<Integer> contactMap = Optional.ofNullable(
+                            contactService.creaContattiDaLotto(idLotto, json)
+                    ).orElse((List<Integer>) Collections.emptyMap());
 
-                    // 2️⃣ Crea deal e ottieni ID (sicuro da null)
-                    List<Integer> dealIds = Optional.ofNullable(dealService.creaDealDaLotto(idLotto, json))
-                            .orElse(Collections.emptyList());
+                    // 2️⃣ Crea deal (ritorna mappa idAnagrafica → dealId)
+                    Map<String, Integer> dealMap = (Map<String, Integer>) Optional.ofNullable(
+                            dealService.creaDealDaLotto(idLotto, json)
+                    ).orElse((List<Integer>) Collections.emptyMap());
 
-                    // 3️⃣ Collega contatti e deal solo se entrambe le liste non sono vuote
-                    if (!dealIds.isEmpty() && !contactIds.isEmpty()) {
-                        for (Integer dealId : dealIds) {
-                            for (Integer contactId : contactIds) {
-                                contactService.linkContactToDeal(dealId, contactId);
-                            }
+                    logger.debug("📦 Contatti creati per lotto {}: {}", idLotto, contactMap);
+                    logger.debug("📦 Deal creati per lotto {}: {}", idLotto, dealMap);
+
+                    // 3️⃣ Collega contatti e deal solo se esiste la corrispondenza per idAnagrafica
+                    int collegamentiEffettuati = 0;
+
+                    for (Map.Entry<String, Integer> entry : dealMap.entrySet()) {
+                        String idAnagrafica = entry.getKey();
+                        Integer dealId = entry.getValue();
+
+                        Integer contactId = contactMap.get(Integer.parseInt(idAnagrafica));
+                        if (contactId != null) {
+                            dealService.linkContactToDeal(dealId, contactId);
+                            collegamentiEffettuati++;
+                            logger.info("🔗 Collegato contatto {} → deal {} (anagrafica: {})",
+                                    contactId, dealId, idAnagrafica);
+                        } else {
+                            logger.warn("⚠️ Nessun contatto trovato per anagrafica {} (deal ID: {})",
+                                    idAnagrafica, dealId);
                         }
-                        logger.debug("DEBUG Lotto {}: contactIds={}, dealIds={}", idLotto, contactIds, dealIds);
-                    } else {
-                        logger.warn("Lotto {}: nessun deal o contatto da collegare.", idLotto);
                     }
 
-                    logger.info("Lotto {} elaborato correttamente. Creati {} contatti e {} deal.",
-                            idLotto, contactIds.size(), dealIds.size());
+                    logger.info("✅ Lotto {} elaborato con successo: {} contatti, {} deal, {} collegamenti.",
+                            idLotto, contactMap.size(), dealMap.size(), collegamentiEffettuati);
 
                 } catch (Exception e) {
-                    logger.error("Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
+                    logger.error("❌ Errore nella lavorazione del lotto {}: {}", idLotto, e.getMessage(), e);
                 }
             }
+
         } catch (Exception e) {
-            logger.error("Errore generale nel flusso automatico: {}", e.getMessage(), e);
+            logger.error("🔥 Errore generale nel flusso automatico: {}", e.getMessage(), e);
         }
     }
 
 
+
+
 }
+
 
 
 
