@@ -33,10 +33,9 @@ public class LottoScheduler {
     }
 
 
-    @Scheduled(fixedRate = 60000)
+    @@Scheduled(fixedRate = 60000)
     public void processaTuttiILotti() {
         try {
-            // Recupera i lotti disponibili
             List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
             if (lottiDisponibili == null || lottiDisponibili.isEmpty()) {
                 logger.info("⏳ Nessun lotto disponibile da processare.");
@@ -48,31 +47,23 @@ public class LottoScheduler {
                 logger.info("🚀 Inizio elaborazione lotto {}", idLotto);
 
                 try {
-                    // Scarica il lotto in formato JSON
                     String json = lottoService.scaricaLottoJson(idLotto);
                     logger.debug("📥 JSON ricevuto per lotto {}: {}", idLotto, json);
 
-                    // 1️⃣ Crea contatti (ritorna mappa idAnagrafica → contactId)
-                    List<Integer> contactMap = Optional.ofNullable(
+                    Map<String, Integer> contactMap = Optional.ofNullable(
                             contactService.creaContattiDaLotto(idLotto, json)
-                    ).orElse((List<Integer>) Collections.emptyMap());
+                    ).orElse(Collections.emptyMap());
 
-                    // 2️⃣ Crea deal (ritorna mappa idAnagrafica → dealId)
-                    Map<String, Integer> dealMap = (Map<String, Integer>) Optional.ofNullable(
+                    Map<String, Integer> dealMap = Optional.ofNullable(
                             dealService.creaDealDaLotto(idLotto, json)
-                    ).orElse((List<Integer>) Collections.emptyMap());
+                    ).orElse(Collections.emptyMap());
 
-                    logger.debug("📦 Contatti creati per lotto {}: {}", idLotto, contactMap);
-                    logger.debug("📦 Deal creati per lotto {}: {}", idLotto, dealMap);
-
-                    // 3️⃣ Collega contatti e deal solo se esiste la corrispondenza per idAnagrafica
                     int collegamentiEffettuati = 0;
-
                     for (Map.Entry<String, Integer> entry : dealMap.entrySet()) {
                         String idAnagrafica = entry.getKey();
                         Integer dealId = entry.getValue();
 
-                        Integer contactId = contactMap.get(Integer.parseInt(idAnagrafica));
+                        Integer contactId = contactMap.get(idAnagrafica);
                         if (contactId != null) {
                             dealService.linkContactToDeal(dealId, contactId);
                             collegamentiEffettuati++;
@@ -84,7 +75,7 @@ public class LottoScheduler {
                         }
                     }
 
-                    logger.info("✅ Lotto {} elaborato con successo: {} contatti, {} deal, {} collegamenti.",
+                    logger.info("✅ Lotto {} elaborato: {} contatti, {} deal, {} collegamenti.",
                             idLotto, contactMap.size(), dealMap.size(), collegamentiEffettuati);
 
                 } catch (Exception e) {
@@ -100,7 +91,10 @@ public class LottoScheduler {
 
 
 
+
+
 }
+
 
 
 
