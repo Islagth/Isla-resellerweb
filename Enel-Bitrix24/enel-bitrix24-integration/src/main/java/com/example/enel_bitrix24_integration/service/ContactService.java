@@ -79,6 +79,7 @@ public class ContactService {
    // ✅ Crea contatti da JSON del lotto e restituisce gli ID creati su Bitrix
 public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exception {
     logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
+    logger.debug("JSON in ingresso per lotto {}: {}", idLotto, json);
 
     List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
     List<String> errori = new ArrayList<>();
