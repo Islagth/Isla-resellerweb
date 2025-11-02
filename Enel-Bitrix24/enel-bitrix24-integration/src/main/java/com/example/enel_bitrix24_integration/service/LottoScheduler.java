@@ -22,8 +22,6 @@ public class LottoScheduler {
     private final ContactService contactService;
     private final DealService dealService;
 
-    private final String accessToken = null; // oppure leggere da config se serve
-
     public LottoScheduler(LottoService lottoService,
                           ContactService contactService,
                           DealService dealService) {
@@ -32,8 +30,7 @@ public class LottoScheduler {
         this.dealService = dealService;
     }
 
-
-    @@Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 60000)
     public void processaTuttiILotti() {
         try {
             List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
@@ -89,11 +86,8 @@ public class LottoScheduler {
     }
 
 
-
-
-
-
 }
+
 
 
 
