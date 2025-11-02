@@ -34,7 +34,7 @@ public class ContactService {
     // Cache in memoria dell'ultimo stato noto (in produzione -> Redis o DB)
     private final Map<Long, ContactDTO> cacheContatti = new ConcurrentHashMap<>();
 
-    public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl,@Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper) {
+    public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
@@ -44,77 +44,105 @@ public class ContactService {
 
     // ----------------- CREAZIONE CONTATTO -----------------
     public String creaContatto(ContactDTO contactDTO) throws Exception {
-        logger.info("Avvio creazione contatto: {} {}");
+        logger.info("Avvio creazione contatto: {} {}", contactDTO.getIdAnagrafica(), contactDTO.getTelefono());
         String url = webHookUrl + "/crm.contact.add";
 
         Map<String, Object> fields = objectMapper.convertValue(contactDTO, new TypeReference<Map<String, Object>>() {});
 
-        // Assegna il campo ID_ANAGRAFICA al nome di contactDTO se presente
-        if (fields.get("ID_ANAGRAFICA") != null) {
-            String idAnagrafica = fields.get("ID_ANAGRAFICA").toString();
-            contactDTO.setNAME(idAnagrafica); // o contactDTO.setNome(idAnagrafica); in base al nome del metodo
-            fields.put("NOME", idAnagrafica); // Aggiorna anche la mappa fields se necessario
+        // Mappa correttamente i nomi del JSON
+        if (fields.get("idAnagrafica") != null) {
+            String idAnagrafica = fields.get("idAnagrafica").toString();
+            contactDTO.setNAME(idAnagrafica);
+            fields.put("NAME", idAnagrafica);
         }
 
-        if (fields.get("TELEFONO") instanceof String) {
-            String phoneValue = (String) fields.get("TELEFONO");
+        if (fields.get("telefono") instanceof String) {
+            String phoneValue = (String) fields.get("telefono");
             List<Map<String, Object>> phones = new ArrayList<>();
             Map<String, Object> phoneMap = new HashMap<>();
             phoneMap.put("VALUE", phoneValue);
             phoneMap.put("VALUE_TYPE", "WORK");
             phones.add(phoneMap);
-            fields.put("TELEFONO", phones);
+            fields.put("PHONE", phones);
         }
+
         Map<String, Object> payload = Map.of("fields", fields);
 
-        logger.debug("Payload inviato a Bitrix24: {}", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload));
+        logger.debug("Payload inviato a Bitrix24: {}",
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload));
 
         String result = postForResultString(url, payload, "creazione contatto");
         logger.info("Creazione contatto completata: {}", result);
         return result;
     }
 
-    
+
+
     // Crea contatti da JSON del lotto
-   // ✅ Crea contatti da JSON del lotto e restituisce gli ID creati su Bitrix
-public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exception {
-    logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
-    logger.debug("JSON in ingresso per lotto {}: {}", idLotto, json);
+    public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exception {
+        logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
 
-    List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
-    List<String> errori = new ArrayList<>();
-    List<Integer> contactIds = new ArrayList<>();
-    int successo = 0;
+        // 🔹 Log completo del JSON ricevuto
+        logger.debug("JSON in ingresso per lotto {} (contatti): {}", idLotto, json);
 
-    for (ContactDTO contactDTO : contatti) {
-        try {
-            // 🔹 Crea il contatto e ottieni l'ID Bitrix restituito
-            Integer contactId = Integer.valueOf(creaContatto(contactDTO));
+        List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
+        List<String> errori = new ArrayList<>();
+        List<Integer> contactIds = new ArrayList<>();
+        int successo = 0;
 
-            if (contactId != null) {
-                contactIds.add(contactId);
-                successo++;
-                logger.info("Creazione contatto completata con ID: {}", contactId);
-            } else {
-                logger.warn("Creazione contatto {} {} non ha restituito un ID valido.",
-                            contactDTO.getNAME(), contactDTO.getLAST_NAME());
+        for (ContactDTO contactDTO : contatti) {
+            try {
+                // 🔹 Adatta i campi per Bitrix (idAnagrafica → NAME, telefono → PHONE, ecc.)
+                contactDTO.normalizeForBitrix();
+
+                // 🔹 Crea contatto su Bitrix e ottieni il risultato
+                String result = creaContatto(contactDTO);
+                logger.debug("Risultato raw Bitrix per contatto {}: {}", contactDTO.getNAME(), result);
+
+                // 🔹 Estrai solo l’ID numerico dalla risposta
+                Integer contactId = null;
+                if (result != null) {
+                    // se Bitrix restituisce un numero puro
+                    if (result.matches("\\d+")) {
+                        contactId = Integer.valueOf(result);
+                    }
+                    // se Bitrix restituisce "Creazione contatto riuscita: 5167"
+                    else if (result.contains(":")) {
+                        String[] parts = result.split(":");
+                        String last = parts[parts.length - 1].trim();
+                        if (last.matches("\\d+")) {
+                            contactId = Integer.valueOf(last);
+                        }
+                    }
+                }
+
+                if (contactId != null) {
+                    contactIds.add(contactId);
+                    successo++;
+                    logger.info("✅ Contatto creato con ID: {}", contactId);
+                } else {
+                    logger.warn("⚠️ Creazione contatto {} non ha restituito un ID valido. Risultato: {}",
+                            contactDTO.getNAME(), result);
+                }
+
+            } catch (Exception e) {
+                String nome = Optional.ofNullable(contactDTO.getNAME()).orElse("Sconosciuto");
+                String cognome = Optional.ofNullable(contactDTO.getLAST_NAME()).orElse("");
+                logger.error("❌ Errore creazione contatto: {} {}", nome, cognome, e);
+                errori.add(nome + " " + cognome + ": " + e.getMessage());
             }
-
-        } catch (Exception e) {
-            logger.error("Errore creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME(), e);
-            errori.add(contactDTO.getNAME() + " " + contactDTO.getLAST_NAME() + ": " + e.getMessage());
         }
+
+        logger.info("Creazione contatti terminata: {} riusciti, {} falliti.", successo, errori.size());
+
+        if (!errori.isEmpty()) {
+            logger.warn("Alcuni contatti non sono stati creati correttamente: {}", errori);
+        }
+
+        // ✅ Restituisco gli ID dei contatti creati
+        return contactIds;
     }
 
-    logger.info("Creazione contatti terminata: {} riusciti, {} falliti.", successo, errori.size());
-
-    if (!errori.isEmpty()) {
-        logger.warn("Alcuni contatti non sono stati creati correttamente: {}", errori);
-    }
-
-    // ✅ Restituisco gli ID dei contatti creati
-    return contactIds;
-}
 
 
     // ----------------- AGGIORNAMENTO CONTATTO -----------------
