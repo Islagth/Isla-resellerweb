@@ -63,6 +63,7 @@ public class LottoScheduler {
                                 contactService.linkContactToDeal(dealId, contactId);
                             }
                         }
+                        logger.debug("DEBUG Lotto {}: contactIds={}, dealIds={}", idLotto, contactIds, dealIds);
                     } else {
                         logger.warn("Lotto {}: nessun deal o contatto da collegare.", idLotto);
                     }
@@ -81,6 +82,7 @@ public class LottoScheduler {
 
 
 }
+
 
 
 
