@@ -78,7 +78,7 @@ public class ContactService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("fields", fields);
 
-        String url = webHookUrl + "/rest/9/txk5orlo651kxu97/crm.contact.add";
+        String url = webHookUrl + "/crm.contact.add";
         logger.info("Invio POST per creazione contatto a URL: {}", url);
 
         ResponseEntity<Map> response = restTemplate.postForEntity(url, requestBody, Map.class);
