@@ -66,7 +66,7 @@ public class DealService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("fields", fields);
 
-        String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.add.json";
+        String url = webHookUrl + "/crm.deal.add.json";
         ResponseEntity<Map> response = restTemplate.postForEntity(url, requestBody, Map.class);
 
         if (response.getBody() != null && response.getBody().get("result") != null) {
