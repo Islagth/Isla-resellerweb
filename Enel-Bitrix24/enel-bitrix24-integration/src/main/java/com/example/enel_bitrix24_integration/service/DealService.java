@@ -32,18 +32,34 @@ public class DealService {
     // ----------------- CREAZIONE DEAL -----------------
 // Crea deal da JSON del lotto
  public List<Integer> creaDealDaLotto(String idLotto, String json) throws Exception {
-        logger.info("Avvio creazione deal da lotto id: {}", idLotto);
+    logger.info("Avvio creazione deal da lotto id: {}", idLotto);
 
-        List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
-        for (DealDTO dto : deals) {
-            try {
-                addDeal(dto, null);
-            } catch (Exception e) {
-                logger.error("Errore creazione deal: {}", dto.getTitle(), e);
+    List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
+    List<Integer> dealIds = new ArrayList<>();
+
+    for (DealDTO dto : deals) {
+        try {
+            // 🔹 addDeal deve restituire l'ID Bitrix del deal creato
+            Integer dealId = addDeal(dto, null);
+
+            if (dealId != null) {
+                dealIds.add(dealId);
+                logger.info("Deal creato con ID: {}", dealId);
+            } else {
+                logger.warn("Creazione deal '{}' non ha restituito un ID valido.", dto.getTitle());
             }
+
+        } catch (Exception e) {
+            logger.error("Errore creazione deal: {}", dto.getTitle(), e);
         }
-        return null;
     }
+
+    logger.info("Creazione deal terminata: {} creati con successo.", dealIds.size());
+
+    // ✅ Ritorna gli ID creati
+    return dealIds;
+}
+
 
     // Creazione singolo deal
     public Integer addDeal(DealDTO dto, Map<String, Object> params) {
