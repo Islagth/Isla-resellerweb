@@ -1,21 +1,21 @@
 package com.example.enel_bitrix24_integration.service;
 
 import com.example.enel_bitrix24_integration.dto.DealDTO;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.*;
 
 @Service
 public class DealService {
 
-     private final RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
     private final String baseUrl;
     private final String  webHookUrl;
     private final ObjectMapper objectMapper;
@@ -30,59 +30,86 @@ public class DealService {
     }
 
     // ----------------- CREAZIONE DEAL -----------------
-// Crea deal da JSON del lotto
- public List<Integer> creaDealDaLotto(String idLotto, String json) throws Exception {
-    logger.info("Avvio creazione deal da lotto id: {}", idLotto);
 
-    List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
-    List<Integer> dealIds = new ArrayList<>();
+    public List<Integer> creaDealDaLotto(String idLotto, String json) throws Exception {
+        logger.info("Avvio creazione deal da lotto id: {}", idLotto);
 
-    for (DealDTO dto : deals) {
-        try {
-            // 🔹 addDeal deve restituire l'ID Bitrix del deal creato
-            Integer dealId = addDeal(dto, null);
+        // 🔹 Log utile per debugging
+        logger.debug("JSON in ingresso per lotto {} (deal): {}", idLotto, json);
 
-            if (dealId != null) {
-                dealIds.add(dealId);
-                logger.info("Deal creato con ID: {}", dealId);
-            } else {
-                logger.warn("Creazione deal '{}' non ha restituito un ID valido.", dto.getTitle());
+        List<DealDTO> deals = objectMapper.readValue(json, new TypeReference<List<DealDTO>>() {});
+        List<Integer> dealIds = new ArrayList<>();
+        List<String> errori = new ArrayList<>();
+        int successo = 0;
+
+        for (DealDTO dto : deals) {
+            try {
+                // 🔹 addDeal ora restituisce direttamente l’ID Bitrix
+                Integer dealId = addDeal(dto, null);
+
+                if (dealId != null) {
+                    dealIds.add(dealId);
+                    successo++;
+                    logger.info("✅ Deal '{}' creato con ID: {}", dto.getTitle(), dealId);
+                } else {
+                    logger.warn("⚠️ Creazione deal '{}' non ha restituito un ID valido.", dto.getTitle());
+                }
+
+            } catch (Exception e) {
+                logger.error("❌ Errore creazione deal '{}': {}", dto.getTitle(), e.getMessage(), e);
+                errori.add(dto.getTitle() + ": " + e.getMessage());
             }
-
-        } catch (Exception e) {
-            logger.error("Errore creazione deal: {}", dto.getTitle(), e);
         }
+
+        logger.info("Creazione deal terminata: {} riusciti, {} falliti.", successo, errori.size());
+
+        if (!errori.isEmpty()) {
+            logger.warn("Alcuni deal non sono stati creati correttamente: {}", errori);
+        }
+
+        return dealIds;
     }
 
-    logger.info("Creazione deal terminata: {} creati con successo.", dealIds.size());
-
-    // ✅ Ritorna gli ID creati
-    return dealIds;
-}
 
 
     // Creazione singolo deal
-    public Integer addDeal(DealDTO dto, Map<String, Object> params) {
+    public Integer addDeal(DealDTO dto, Map<String, Object> params) throws Exception {
         logger.info("Avvio creazione deal con titolo: {}", dto.getTitle());
-        String url = webHookUrl +  "/crm.deal.add";
+
+        String url = webHookUrl + "/crm.deal.add";
         Map<String, Object> fields = convertDtoToFields(dto);
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("fields", fields);
         requestBody.put("params", params != null ? params : Map.of());
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
+        // 🔹 Log del payload che viene inviato
+        logger.debug("Payload inviato a Bitrix24 (deal): {}",
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestBody));
 
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+
         Map<String, Object> body = extractAndValidateBody(response);
 
-        if (body.containsKey("result") && body.get("result") instanceof Integer) {
-            Integer dealId = (Integer) body.get("result");
-            logger.info("Deal creato con ID: {}", dealId);
-            return dealId;
+        // 🔹 Bitrix24 restituisce un oggetto con campo "result"
+        if (body != null && body.containsKey("result")) {
+            Object result = body.get("result");
+            if (result instanceof Integer) {
+                Integer dealId = (Integer) result;
+                logger.info("✅ Deal creato con ID: {}", dealId);
+                return dealId;
+            } else if (result instanceof String && ((String) result).matches("\\d+")) {
+                Integer dealId = Integer.valueOf((String) result);
+                logger.info("✅ Deal creato con ID (stringa): {}", dealId);
+                return dealId;
+            }
         }
+
+        logger.error("❌ Risposta inattesa dal server Bitrix24: {}", body);
         throw new RuntimeException("Risposta inattesa dal server: " + body);
     }
+
 
     // ----------------- AGGIORNAMENTO DEAL -----------------
     public boolean updateDeal(DealDTO dto, Map<String, Object> params) {
@@ -186,6 +213,57 @@ public class DealService {
         logger.info("Cancellazione deal ID {} risultato: {}", id, deleted);
         return deleted;
     }
+
+     //--------------------CONNETTI CONTATTO CON DEAL----------------------
+    public void linkContactToDeal(Integer dealId, Integer contactId) {
+        logger.info("🔗 Inizio collegamento contatto {} al deal {}", contactId, dealId);
+
+        // Corpo della richiesta conforme a Bitrix24
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", dealId);
+
+        Map<String, Object> contactData = new HashMap<>();
+        contactData.put("CONTACT_ID", contactId);
+        contactData.put("SORT", 100);
+        contactData.put("IS_PRIMARY", "Y");
+
+        payload.put("fields", contactData);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+        // ✅ URL corretto (usa solo il webhook base)
+        String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
+
+        try {
+            logger.debug("➡️  Invio richiesta Bitrix a: {}", url);
+            logger.debug("➡️  Payload JSON: {}", new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(payload));
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+            Map<String, Object> body = response.getBody();
+
+            logger.debug("⬅️  Risposta Bitrix: {}", body);
+
+            if (body == null) {
+                throw new RuntimeException("Risposta vuota da Bitrix durante il collegamento contatto-deal");
+            }
+
+            if (body.containsKey("error")) {
+                String error = (String) body.get("error");
+                String errorDescription = (String) body.get("error_description");
+                throw new RuntimeException("Errore Bitrix [" + error + "]: " + errorDescription);
+            }
+
+            logger.info("✅ Collegato contatto {} al deal {}", contactId, dealId);
+
+        } catch (Exception e) {
+            logger.error("❌ Errore durante il collegamento contatto {} → deal {}: {}", contactId, dealId, e.getMessage(), e);
+            throw new RuntimeException("Errore nella chiamata REST per collegare il contatto al deal: " + e.getMessage(), e);
+        }
+    }
+
+
 
 
     // ----------------- HELPERS -----------------
