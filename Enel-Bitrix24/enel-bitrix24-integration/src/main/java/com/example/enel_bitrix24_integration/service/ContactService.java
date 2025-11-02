@@ -76,30 +76,45 @@ public class ContactService {
 
     
     // Crea contatti da JSON del lotto
-    public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exception {
-        logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
+   // ✅ Crea contatti da JSON del lotto e restituisce gli ID creati su Bitrix
+public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exception {
+    logger.info("Avvio creazione contatti da lotto id: {}", idLotto);
 
-        List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
-        List<String> errori = new ArrayList<>();
-        int successo = 0;
+    List<ContactDTO> contatti = objectMapper.readValue(json, new TypeReference<List<ContactDTO>>() {});
+    List<String> errori = new ArrayList<>();
+    List<Integer> contactIds = new ArrayList<>();
+    int successo = 0;
 
-        for (ContactDTO contactDTO : contatti) {
-            try {
-                creaContatto(contactDTO);
+    for (ContactDTO contactDTO : contatti) {
+        try {
+            // 🔹 Crea il contatto e ottieni l'ID Bitrix restituito
+            Integer contactId = creaContatto(contactDTO);
+
+            if (contactId != null) {
+                contactIds.add(contactId);
                 successo++;
-            } catch (Exception e) {
-                logger.error("Errore creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME(), e);
-                errori.add(contactDTO.getNAME() + " " + contactDTO.getLAST_NAME() + ": " + e.getMessage());
+                logger.info("Creazione contatto completata con ID: {}", contactId);
+            } else {
+                logger.warn("Creazione contatto {} {} non ha restituito un ID valido.",
+                            contactDTO.getNAME(), contactDTO.getLAST_NAME());
             }
-        }
 
-        logger.info("Creazione contatti terminata: {} riusciti, {} falliti.", successo, errori.size());
-
-        if (!errori.isEmpty()) {
-            throw new RuntimeException("Alcuni contatti non sono stati creati: " + String.join("; ", errori));
+        } catch (Exception e) {
+            logger.error("Errore creazione contatto: {} {}", contactDTO.getNAME(), contactDTO.getLAST_NAME(), e);
+            errori.add(contactDTO.getNAME() + " " + contactDTO.getLAST_NAME() + ": " + e.getMessage());
         }
-        return null;
     }
+
+    logger.info("Creazione contatti terminata: {} riusciti, {} falliti.", successo, errori.size());
+
+    if (!errori.isEmpty()) {
+        logger.warn("Alcuni contatti non sono stati creati correttamente: {}", errori);
+    }
+
+    // ✅ Restituisco gli ID dei contatti creati
+    return contactIds;
+}
+
 
     // ----------------- AGGIORNAMENTO CONTATTO -----------------
     public String aggiornaContatto(int contactId, Map<String, Object> fields, Map<String, Object> params) throws Exception {
