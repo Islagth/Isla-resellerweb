@@ -218,52 +218,6 @@ public class ContactService {
         }
     }
 
-    //--------------------CONNETTI CONTATTO CON DEAL----------------------
-  public void linkContactToDeal(Integer dealId, Integer contactId) {
-    logger.info("Inizio collegamento contatto {} al deal {}", contactId, dealId);
-
-    Map<String, Object> fields = new HashMap<>();
-    fields.put("CONTACT_ID", contactId);
-    fields.put("SORT", 100);
-    fields.put("IS_PRIMARY", "Y");
-
-    Map<String, Object> params = new HashMap<>();
-    params.put("id", dealId);
-    params.put("fields", fields);
-
-    HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_JSON);
-    HttpEntity<Map<String, Object>> request = new HttpEntity<>(params, headers);
-
-    // URL completo Bitrix — attenzione all'ID utente e token nel webhook
-    String url = webHookUrl + "/rest/9/nqg040m0onmcsp34/crm.deal.contact.add.json";
-
-    try {
-        logger.debug("➡️  Invio richiesta a Bitrix: {}", url);
-        logger.debug("➡️  Payload JSON: {}", new ObjectMapper().writeValueAsString(params));
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-        Map<String, Object> body = response.getBody();
-
-        logger.debug("⬅️  Risposta Bitrix: {}", body);
-
-        if (body == null) {
-            throw new RuntimeException("Risposta vuota da Bitrix durante il collegamento contatto-deal");
-        }
-
-        if (body.containsKey("error")) {
-            String error = (String) body.get("error");
-            String errorDescription = (String) body.get("error_description");
-            throw new RuntimeException("Errore Bitrix [" + error + "]: " + errorDescription);
-        }
-
-        logger.info("✅ Collegato contatto {} al deal {}", contactId, dealId);
-
-    } catch (Exception e) {
-        logger.error("❌ Errore durante il collegamento contatto {} → deal {}: {}", contactId, dealId, e.getMessage(), e);
-        throw new RuntimeException("Errore nella chiamata REST per collegare il contatto al deal: " + e.getMessage(), e);
-    }
-}
 
     // Metodo privato per chiamate POST che restituiscono stringa (messaggi di successo)
     private String postForResultString(String url, Map<String, Object> payload, String actionDescription) throws Exception {
