@@ -1,5 +1,7 @@
 package com.example.enel_bitrix24_integration.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -11,49 +13,75 @@ import java.util.Map;
 @Data
 public class ContactDTO {
 
-    private String HONORIFIC;                  // Salutation (crm_status)
-    private String NAME;                      // First name
-    private String SECOND_NAME;               // Middle name
-    private String LAST_NAME;                 // Last name
-    private String BIRTHDATE;                 // yyyy-MM-dd
-    private String TYPE_ID;                   // Contact type (crm_status)
-    private String SOURCE_ID;                 // Source (crm_status)
-    private String SOURCE_DESCRIPTION;       // Additional source info
-    private String POST;                      // Position
-    private String COMMENTS;                  // Comments BB code supported
-    private String OPENED;                    // Y or N (available to everyone)
-    private String EXPORT;                    // Y or N (included in export)
-    private Integer ASSIGNED_BY_ID;           // Responsible user id
-    private Integer COMPANY_ID;                // Main company id
-    private List<Integer> COMPANY_IDS;         // Linked companies ids
-    private String UTM_SOURCE;                // Advertising source
-    private String UTM_MEDIUM;                // Traffic type (CPC, CPM)
-    private String UTM_CAMPAIGN;              // Advertising campaign
-    private String UTM_CONTENT;               // Campaign content
-    private String UTM_TERM;                  // Campaign search term
-    private List<MultiField> PHONE;           // Phone numbers
-    private List<MultiField> EMAIL;           // Emails
-    private List<MultiField> WEB;             // Websites
-    private List<MultiField> IM;              // Messengers
-    private List<MultiField> LINK;            // Links (service field)
-    private Map<String, Object> UF;          // Custom fields UF_CRM_...
-    private String RESULT_CODE;                //Custom field per l'esito
-    // Relationship fields PARENT_ID_xxx are omitted for brevity (can be added as Map<String,Object> if needed)
-
-    // Import related fields (available when IMPORT = 'Y' in params)
+    // --- Campi Bitrix24 ---
+    private String HONORIFIC;
+    private String NAME;
+    private String SECOND_NAME;
+    private String LAST_NAME;
+    private String BIRTHDATE;
+    private String TYPE_ID;
+    private String SOURCE_ID;
+    private String SOURCE_DESCRIPTION;
+    private String POST;
+    private String COMMENTS;
+    private String OPENED;
+    private String EXPORT;
+    private Integer ASSIGNED_BY_ID;
+    private Integer COMPANY_ID;
+    private List<Integer> COMPANY_IDS;
+    private String UTM_SOURCE;
+    private String UTM_MEDIUM;
+    private String UTM_CAMPAIGN;
+    private String UTM_CONTENT;
+    private String UTM_TERM;
+    private List<MultiField> PHONE;
+    private List<MultiField> EMAIL;
+    private List<MultiField> WEB;
+    private List<MultiField> IM;
+    private List<MultiField> LINK;
+    private Map<String, Object> UF;
+    private String RESULT_CODE;
     private Date DATE_CREATE;
     private Date DATE_MODIFY;
     private Integer CREATED_BY_ID;
     private Integer MODIFY_BY_ID;
 
-    // Inner static class for multifield entries like PHONE, EMAIL
+    // --- Campi custom JSON del lotto ---
+    @JsonProperty("idAnagrafica")
+    private String idAnagrafica;
+
+    @JsonProperty("telefono")
+    private String telefono;
+
+    @JsonProperty("externalId")
+    private String externalId;
+
+    @JsonProperty("dataScadenza")
+    private String dataScadenza;
+
+    // --- Post-process conversione ---
+    @JsonIgnore
+    public void normalizeForBitrix() {
+        // Se arriva solo idAnagrafica, usalo come nome
+        if (this.idAnagrafica != null && (this.NAME == null || this.NAME.isEmpty())) {
+            this.NAME = this.idAnagrafica;
+        }
+
+        // Se arriva telefono, costruisci lista MultiField
+        if (this.telefono != null && (this.PHONE == null || this.PHONE.isEmpty())) {
+            this.PHONE = List.of(new MultiField(this.telefono, "WORK"));
+        }
+
+        // puoi aggiungere altre regole (es. SOURCE_ID default, COMMENTS, ecc.)
+    }
+
+    // --- Inner class per multifield ---
     @Data
     public static class MultiField {
         private String VALUE;
         private String VALUE_TYPE;
 
-        public MultiField() {
-        }
+        public MultiField() {}
 
         public MultiField(String VALUE, String VALUE_TYPE) {
             this.VALUE = VALUE;
@@ -61,3 +89,4 @@ public class ContactDTO {
         }
     }
 }
+
