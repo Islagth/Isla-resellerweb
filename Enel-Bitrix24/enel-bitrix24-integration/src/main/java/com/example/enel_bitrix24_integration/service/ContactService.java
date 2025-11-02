@@ -88,7 +88,7 @@ public List<Integer> creaContattiDaLotto(String idLotto, String json) throws Exc
     for (ContactDTO contactDTO : contatti) {
         try {
             // 🔹 Crea il contatto e ottieni l'ID Bitrix restituito
-            Integer contactId = creaContatto(contactDTO);
+            Integer contactId = Integer.valueOf(creaContatto(contactDTO));
 
             if (contactId != null) {
                 contactIds.add(contactId);
