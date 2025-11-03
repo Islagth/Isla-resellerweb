@@ -227,7 +227,7 @@ public class ContactService {
      */
     public List<Map<String, Object>> listaCustomFields() {
         try {
-            String url = baseUrl + "rest/9/nmvjjijpb9vit7my/crm.contact.userfield.list.json";
+            String url = baseUrl + "/rest/9/nmvjjijpb9vit7my/crm.contact.userfield.list.json";
             Map<String, Object> body = Map.of(
                     "filter", new HashMap<>(),
                     "order", Map.of("SORT", "ASC", "ID", "ASC")
