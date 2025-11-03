@@ -40,7 +40,7 @@ public class ContactDTO {
     private List<MultiField> IM;
     private List<MultiField> LINK;
     private Map<String, Object> UF;
-    private String RESULT_CODE;
+    private ResultCode RESULT_CODE;
     private LocalDateTime DATE_CREATE;
     private LocalDateTime DATE_MODIFY;
     private Integer CREATED_BY_ID;
