@@ -41,8 +41,8 @@ public class ContactDTO {
     private List<MultiField> LINK;
     private Map<String, Object> UF;
     private String RESULT_CODE;
-    private Date DATE_CREATE;
-    private Date DATE_MODIFY;
+    private LocalDateTime DATE_CREATE;
+    private LocalDateTime DATE_MODIFY;
     private Integer CREATED_BY_ID;
     private Integer MODIFY_BY_ID;
 
@@ -89,4 +89,5 @@ public class ContactDTO {
         }
     }
 }
+
 
