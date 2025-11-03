@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -47,48 +48,43 @@ public class BitrixService {
         return headers;
     }
 
+    /**
+     * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
+     */
     public LeadResponse invioLavorato(LeadRequest request) {
         String url = baseUrl + "/partner-api/v5/workedcontact";
         HttpHeaders headers = getBearerAuthHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
 
         int maxRetry = 3;
-        int retryCount = 0;
-        logger.info("Avvio invio lavorato con dati: {}", request);
-
-        while (retryCount < maxRetry) {
+        for (int attempt = 1; attempt <= maxRetry; attempt++) {
             try {
-                LeadResponse response = restTemplate.postForObject(url, entity, LeadResponse.class);
-                logger.info("Chiamata API lavorato riuscita al tentativo {}", retryCount + 1);
-                return response;
+                logger.info("📨 Invio contatto lavorato (tentativo {}): {}", attempt, request);
+                ResponseEntity<LeadResponse> response = restTemplate.postForEntity(url, entity, LeadResponse.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    logger.info("✅ Invio contatto riuscito al tentativo {}", attempt);
+                    return response.getBody();
+                }
             } catch (Exception e) {
-                retryCount++;
-                logger.error("Errore chiamata API al tentativo {}: {}", retryCount, e.getMessage());
-                if (retryCount >= maxRetry) {
-                    LeadResponse errorResponse = new LeadResponse();
-                    errorResponse.setSuccess(false);
-                    errorResponse.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi: " + e.getMessage());
-                    logger.error("Fallito invio lavorato dopo {} tentativi", maxRetry);
-                    return errorResponse;
+                logger.error("❌ Errore al tentativo {}: {}", attempt, e.getMessage());
+                if (attempt == maxRetry) {
+                    LeadResponse error = new LeadResponse();
+                    error.setSuccess(false);
+                    error.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi: " + e.getMessage());
+                    return error;
                 }
                 try {
-                    logger.info("Attesa prima del retry n.{}", retryCount);
-                    Thread.sleep(1000 * retryCount); // delay progressivo 1s, 2s, 3s
+                    Thread.sleep(1000L * attempt); // Backoff progressivo
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    LeadResponse errorResponse = new LeadResponse();
-                    errorResponse.setSuccess(false);
-                    errorResponse.setMessage("Errore chiamata API, retry interrotto.");
-                    logger.error("Retry interrotto da InterruptedException");
-                    return errorResponse;
+                    break;
                 }
             }
         }
-        LeadResponse errorResponse = new LeadResponse();
-        errorResponse.setSuccess(false);
-        errorResponse.setMessage("Errore imprevisto nel retry");
-        logger.error("Errore imprevisto nel retry invio lavorato");
-        return errorResponse;
+
+        LeadResponse fallback = new LeadResponse();
+        fallback.setSuccess(false);
+        fallback.setMessage("Errore imprevisto dopo tentativi multipli");
+        return fallback;
     }
 }
