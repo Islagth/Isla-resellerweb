@@ -17,6 +17,9 @@ import java.net.URI;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -310,29 +313,62 @@ public class ContactService {
     }
 
 
-
-    public List<LeadRequest> trovaContattiModificati() {
+        public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
+
         try {
+            // 🔹 Recupera contatti attivi
             Map<String, Object> filter = Map.of("ACTIVE", "Y");
             Map<String, Object> result = listaContatti(
-                    filter, null, List.of("ID", "NAME", "DATE_MODIFY"), 0);
+                    filter, null, List.of("ID", "NAME", "DATE_MODIFY"), 0
+            );
 
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
-            if (lista == null) return modificati;
+            if (lista == null || lista.isEmpty()) {
+                logger.info("Nessun contatto attivo trovato.");
+                return modificati;
+            }
 
             for (Map<String, Object> contattoMap : lista) {
-                Integer id = Integer.valueOf(String.valueOf(contattoMap.get("ID")));
+                Integer id;
+                try {
+                    id = Integer.valueOf(String.valueOf(contattoMap.get("ID")));
+                } catch (NumberFormatException e) {
+                    logger.warn("⚠️ ID non valido per contatto: {}", contattoMap.get("ID"));
+                    continue;
+                }
+
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
+                if (dateModify == null || dateModify.isBlank()) {
+                    logger.warn("⚠️ Contatto {} senza data di modifica", id);
+                    continue;
+                }
 
                 ContactDTO nuovo = new ContactDTO();
-                Date parsedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(dateModify);
-                nuovo.setDATE_MODIFY(parsedDate);
 
+                // 🔹 Parsing ISO 8601 → LocalDateTime
+                try {
+                    OffsetDateTime offsetDateTime = OffsetDateTime.parse(dateModify);
+                    LocalDateTime localDateTime = offsetDateTime.toLocalDateTime();
+                    nuovo.setDATE_MODIFY(localDateTime);
+                } catch (DateTimeParseException ex) {
+                    try {
+                        // 🔁 Fallback per formati tipo "yyyy-MM-dd HH:mm:ss"
+                        DateTimeFormatter fallbackFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        LocalDateTime localDateTime = LocalDateTime.parse(dateModify, fallbackFormatter);
+                        nuovo.setDATE_MODIFY(localDateTime);
+                    } catch (Exception innerEx) {
+                        logger.warn("❌ Formato data non riconosciuto per contatto {}: {}", id, dateModify);
+                        continue;
+                    }
+                }
+
+                // 🔹 Recupera valore del campo custom UF_CRM_RESULT_CODE
                 String resultCodeValue = getResultCodeForContact(id);
                 nuovo.setRESULT_CODE(resultCodeValue);
 
+                // 🔹 Recupera eventuale contatto precedente dalla cache
                 ContactDTO vecchio = cacheContatti.get(id.longValue());
                 boolean modificato = vecchio == null ||
                         !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY()) ||
@@ -348,14 +384,19 @@ public class ContactService {
 
                     modificati.add(req);
                     cacheContatti.put(id.longValue(), nuovo);
+
+                    logger.info("🔄 Contatto {} modificato → aggiunto alla lista invii automatici", id);
                 }
             }
 
         } catch (Exception e) {
-            logger.error("Errore durante il recupero o confronto contatti", e);
+            logger.error("🔥 Errore durante il recupero o confronto contatti", e);
         }
+
+        logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
         return modificati;
     }
+
 }
 
 
