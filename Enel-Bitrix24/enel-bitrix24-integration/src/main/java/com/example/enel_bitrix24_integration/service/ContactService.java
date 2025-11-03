@@ -313,14 +313,13 @@ public class ContactService {
     }
 
 
-        public List<LeadRequest> trovaContattiModificati() {
+    public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
 
         try {
-            // 🔹 Recupera contatti attivi
             Map<String, Object> filter = Map.of("ACTIVE", "Y");
             Map<String, Object> result = listaContatti(
-                    filter, null, List.of("ID", "NAME", "DATE_MODIFY"), 0
+                    filter, null, List.of("ID", "NAME", "PHONE", "DATE_MODIFY"), 0
             );
 
             @SuppressWarnings("unchecked")
@@ -339,36 +338,38 @@ public class ContactService {
                     continue;
                 }
 
+                String name = (String) contattoMap.get("NAME");
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
+
                 if (dateModify == null || dateModify.isBlank()) {
                     logger.warn("⚠️ Contatto {} senza data di modifica", id);
                     continue;
                 }
 
                 ContactDTO nuovo = new ContactDTO();
+                // 🔹 Se esiste setId(), usalo
+                // nuovo.setId(id.longValue());
+                nuovo.setNAME(name);
 
-                // 🔹 Parsing ISO 8601 → LocalDateTime
+                // 🔹 Parsing della data
                 try {
                     OffsetDateTime offsetDateTime = OffsetDateTime.parse(dateModify);
-                    LocalDateTime localDateTime = offsetDateTime.toLocalDateTime();
-                    nuovo.setDATE_MODIFY(localDateTime);
-                } catch (DateTimeParseException ex) {
+                    nuovo.setDATE_MODIFY(offsetDateTime.toLocalDateTime());
+                } catch (Exception ex) {
                     try {
-                        // 🔁 Fallback per formati tipo "yyyy-MM-dd HH:mm:ss"
                         DateTimeFormatter fallbackFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                        LocalDateTime localDateTime = LocalDateTime.parse(dateModify, fallbackFormatter);
-                        nuovo.setDATE_MODIFY(localDateTime);
+                        nuovo.setDATE_MODIFY(LocalDateTime.parse(dateModify, fallbackFormatter));
                     } catch (Exception innerEx) {
                         logger.warn("❌ Formato data non riconosciuto per contatto {}: {}", id, dateModify);
                         continue;
                     }
                 }
 
-                // 🔹 Recupera valore del campo custom UF_CRM_RESULT_CODE
-                String resultCodeValue = getResultCodeForContact(id);
-                nuovo.setRESULT_CODE(resultCodeValue);
+                // 🔹 Recupera codice risultato
+                String resultCodeValue = Optional.ofNullable(getResultCodeForContact(id)).orElse("UNKNOWN");
+                nuovo.setRESULT_CODE(ResultCode.valueOf(resultCodeValue));
 
-                // 🔹 Recupera eventuale contatto precedente dalla cache
+                // 🔹 Recupera contatto precedente
                 ContactDTO vecchio = cacheContatti.get(id.longValue());
                 boolean modificato = vecchio == null ||
                         !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY()) ||
@@ -376,8 +377,16 @@ public class ContactService {
 
                 if (modificato) {
                     LeadRequest req = new LeadRequest();
-                    req.setContactId(Long.valueOf(vecchio.getNAME()));
-                    req.setWorkedCode("AUTO_" + vecchio.getPHONE());
+
+                    // 👇 Conversione NAME → Long sicura
+                    Long contactId = parseLongSafe(nuovo.getNAME());
+                    if (contactId == null) {
+                        logger.warn("⚠️ NAME non numerico per contatto {}: {}", id, nuovo.getNAME());
+                        continue;
+                    }
+
+                    req.setContactId(contactId);
+                    req.setWorkedCode(extractPrimaryPhone(nuovo)); // ✅ telefono principale
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
@@ -396,6 +405,24 @@ public class ContactService {
         logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
         return modificati;
     }
+
+
+    /**
+     * Converte una stringa in Long in modo sicuro, restituendo null se non è numerica.
+     */
+    private Long parseLongSafe(String value) {
+        try {
+            return (value != null && !value.isBlank()) ? Long.valueOf(value.trim()) : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String extractPrimaryPhone(ContactDTO contact) {
+        if (contact.getPHONE() == null || contact.getPHONE().isEmpty()) return null;
+        return contact.getPHONE().get(0).getVALUE(); // prende il primo numero
+    }
+
 
 }
 
