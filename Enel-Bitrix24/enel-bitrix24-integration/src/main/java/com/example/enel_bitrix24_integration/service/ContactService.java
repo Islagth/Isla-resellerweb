@@ -376,8 +376,8 @@ public class ContactService {
 
                 if (modificato) {
                     LeadRequest req = new LeadRequest();
-                    req.setContactId(id.longValue());
-                    req.setWorkedCode("AUTO_" + id);
+                    req.setContactId(Long.valueOf(vecchio.getNAME()));
+                    req.setWorkedCode("AUTO_" + vecchio.getPHONE());
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
