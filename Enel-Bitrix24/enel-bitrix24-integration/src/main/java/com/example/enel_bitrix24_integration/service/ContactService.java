@@ -217,46 +217,40 @@ public class ContactService {
         }
     }
 
-    /**
+   /**
      * Recupera tutti i custom field dei contatti da Bitrix24
+     *
      * @return List di Map con le informazioni dei custom field
      */
     public List<Map<String, Object>> listaCustomFields() {
         try {
-            String url =  baseUrl + "/rest/9/nmvjjijpb9vit7my/crm.contact.userfield.list.json";
-
-            // Corpo della richiesta (nessun filtro, restituisce tutti i campi)
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("filter", new HashMap<>()); // nessun filtro
-            requestBody.put("order", Map.of("SORT", "ASC", "ID", "ASC")); // ordinamento
+            String url = baseUrl + "rest/9/nmvjjijpb9vit7my/crm.contact.userfield.list.json";
+            Map<String, Object> body = Map.of(
+                    "filter", new HashMap<>(),
+                    "order", Map.of("SORT", "ASC", "ID", "ASC")
+            );
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.POST, entity, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
                 JsonNode result = root.path("result");
-
                 if (result.isArray()) {
                     List<Map<String, Object>> fields = new ArrayList<>();
                     for (JsonNode fieldNode : result) {
-                        Map<String, Object> fieldMap = objectMapper.convertValue(fieldNode, Map.class);
-                        fields.add(fieldMap);
+                        fields.add(objectMapper.convertValue(fieldNode, Map.class));
                     }
                     return fields;
                 }
             }
         } catch (Exception e) {
-            logger.error("Errore durante il recupero dei custom field dei contatti: {}", e.getMessage(), e);
+            logger.error("❌ Errore durante il recupero dei custom field: {}", e.getMessage(), e);
         }
-
         return Collections.emptyList();
     }
-
 
 
     /**
@@ -266,30 +260,29 @@ public class ContactService {
     public String getResultCodeForContact(Integer contactId) {
         try {
             // 🔹 Recupera la lista dei custom field dei contatti
-            Map<String, Object> userFieldsResponse = (Map<String, Object>) listaCustomFields();
-            // listaCustomFields() è un metodo che chiama crm.contact.userfield.list e ritorna List<Map<String,Object>>
+            List<Map<String, Object>> userFields = listaCustomFields();
+            // listaCustomFields() chiama crm.contact.userfield.list e ritorna List<Map<String,Object>>
 
-            // 🔹 Trova l'ID del campo 'UF_CRM_RESULT_CODE'
-            Optional<Map<String, Object>> campoResultCodeOpt = userFieldsResponse.entrySet().stream()
-                    .map(e -> (Map<String, Object>) e.getValue())
+            // 🔹 Trova il campo "RESULT_CODE" tra i custom fields
+            Optional<Map<String, Object>> campoResultCodeOpt = userFields.stream()
                     .filter(f -> "RESULT_CODE".equals(f.get("FIELD_NAME")))
                     .findFirst();
 
             if (campoResultCodeOpt.isEmpty()) {
-                logger.warn("Custom field RESULT_CODE non trovato");
+                logger.warn("⚠️ Custom field RESULT_CODE non trovato");
                 return null;
             }
 
             String fieldId = campoResultCodeOpt.get().get("ID").toString();
 
-            // 🔹 Recupera il contatto specifico usando listaContatti
+            // 🔹 Recupera il contatto specifico includendo il campo custom
             Map<String, Object> filter = new HashMap<>();
             filter.put("ID", contactId);
 
             Map<String, Object> result = listaContatti(
                     filter,
                     null,
-                    List.of("ID", "NAME", "DATE_MODIFY", fieldId), // usa l'ID dinamico
+                    List.of("ID", "NAME", "DATE_MODIFY", fieldId), // usa l'ID dinamico del campo custom
                     0
             );
 
@@ -300,100 +293,67 @@ public class ContactService {
                 Map<String, Object> contattoMap = lista.get(0);
                 Object codeValue = contattoMap.get(fieldId);
                 if (codeValue != null) {
+                    logger.info("📄 RESULT_CODE per contatto {}: {}", contactId, codeValue);
                     return codeValue.toString();
+                } else {
+                    logger.info("ℹ️ Nessun RESULT_CODE presente per contatto {}", contactId);
                 }
+            } else {
+                logger.warn("⚠️ Nessun contatto trovato con ID {}", contactId);
             }
+
         } catch (Exception e) {
-            logger.warn("Errore durante il recupero di RESULT_CODE per contatto {}: {}", contactId, e.getMessage());
+            logger.error("❌ Errore durante il recupero di RESULT_CODE per contatto {}: {}", contactId, e.getMessage(), e);
         }
 
         return null;
     }
 
 
-   public List<LeadRequest> trovaContattiModificati() {
-        List<LeadRequest> modificati = new ArrayList<>();
 
+    public List<LeadRequest> trovaContattiModificati() {
+        List<LeadRequest> modificati = new ArrayList<>();
         try {
-            // Recupera contatti attivi tramite il metodo esistente
-            Map<String, Object> filter = new HashMap<>();
-            filter.put("ACTIVE", "Y");
+            Map<String, Object> filter = Map.of("ACTIVE", "Y");
             Map<String, Object> result = listaContatti(
-                    filter,
-                    null,
-                    List.of("ID", "NAME", "DATE_MODIFY"),
-                    0
-            );
+                    filter, null, List.of("ID", "NAME", "DATE_MODIFY"), 0);
 
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
+            if (lista == null) return modificati;
 
             for (Map<String, Object> contattoMap : lista) {
-                Integer id = null;
-                try {
-                    id = Integer.valueOf(String.valueOf(contattoMap.get("ID")));
-                } catch (NumberFormatException e) {
-                    logger.warn("ID non valido per contatto: {}", contattoMap.get("ID"));
-                    continue;
-                }
-
+                Integer id = Integer.valueOf(String.valueOf(contattoMap.get("ID")));
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
 
                 ContactDTO nuovo = new ContactDTO();
-                try {
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    Date parsedDate = sdf.parse(dateModify);
-                    nuovo.setDATE_MODIFY(parsedDate);
-                } catch (ParseException e) {
-                    logger.warn("Formato data non valido per contatto {}: {}", id, dateModify);
-                    continue;
-                }
+                Date parsedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(dateModify);
+                nuovo.setDATE_MODIFY(parsedDate);
 
-                // 🔹 Recupera il valore corrente del campo custom UF_CRM_RESULT_CODE
                 String resultCodeValue = getResultCodeForContact(id);
                 nuovo.setRESULT_CODE(resultCodeValue);
 
-                // Confronto con la cache
-                ContactDTO vecchio = cacheContatti.get(id);
-                boolean modificato = false;
-
-                if (vecchio == null) {
-                    modificato = true;
-                } else {
-                    boolean dataDiversa = !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY());
-                    boolean campoDiverso = !Objects.equals(vecchio.getRESULT_CODE(), nuovo.getRESULT_CODE());
-                    modificato = dataDiversa || campoDiverso;
-                }
+                ContactDTO vecchio = cacheContatti.get(id.longValue());
+                boolean modificato = vecchio == null ||
+                        !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY()) ||
+                        !Objects.equals(vecchio.getRESULT_CODE(), nuovo.getRESULT_CODE());
 
                 if (modificato) {
                     LeadRequest req = new LeadRequest();
-
-                    // Imposta ID contatto e nome
-                    req.setContactId(Long.valueOf(id));
-
-                    // Estrai il telefono principale dal ContactDTO
-                    List<ContactDTO.MultiField> telefoni = nuovo.getPHONE();
-                    String telefonoPrincipale = (telefoni != null && !telefoni.isEmpty())
-                            ? telefoni.get(0).getVALUE()
-                            : null;
-
-                    req.setWorkedCode(
-                            telefonoPrincipale != null
-                                    ? telefonoPrincipale
-                                    : (nuovo.getPHONE() != null ? nuovo.getPHONE().toString() : null)
-                    );
+                    req.setContactId(id.longValue());
+                    req.setWorkedCode("AUTO_" + id);
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
 
                     modificati.add(req);
-                    cacheContatti.put(Long.valueOf(id), nuovo);
+                    cacheContatti.put(id.longValue(), nuovo);
                 }
             }
-        } catch (Exception e) {
-            logger.error("Errore durante il recupero o il confronto dei contatti", e);
-        }
 
+        } catch (Exception e) {
+            logger.error("Errore durante il recupero o confronto contatti", e);
+        }
         return modificati;
     }
 }
