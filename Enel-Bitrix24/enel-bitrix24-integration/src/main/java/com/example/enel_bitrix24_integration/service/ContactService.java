@@ -313,10 +313,11 @@ public class ContactService {
     }
 
 
-    public List<LeadRequest> trovaContattiModificati() {
+   public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
 
         try {
+            // 🔹 Recupera contatti attivi da Bitrix24
             Map<String, Object> filter = Map.of("ACTIVE", "Y");
             Map<String, Object> result = listaContatti(
                     filter, null, List.of("ID", "NAME", "PHONE", "DATE_MODIFY"), 0
@@ -346,12 +347,11 @@ public class ContactService {
                     continue;
                 }
 
+                // 🔹 Crea nuovo oggetto ContactDTO
                 ContactDTO nuovo = new ContactDTO();
-                // 🔹 Se esiste setId(), usalo
-                // nuovo.setId(id.longValue());
                 nuovo.setNAME(name);
 
-                // 🔹 Parsing della data
+                // 🔹 Parsing della data di modifica
                 try {
                     OffsetDateTime offsetDateTime = OffsetDateTime.parse(dateModify);
                     nuovo.setDATE_MODIFY(offsetDateTime.toLocalDateTime());
@@ -365,11 +365,11 @@ public class ContactService {
                     }
                 }
 
-                // 🔹 Recupera codice risultato
+                // 🔹 Recupera codice risultato custom (UF_CRM_RESULT_CODE)
                 String resultCodeValue = Optional.ofNullable(getResultCodeForContact(id)).orElse("UNKNOWN");
                 nuovo.setRESULT_CODE(ResultCode.valueOf(resultCodeValue));
 
-                // 🔹 Recupera contatto precedente
+                // 🔹 Recupera eventuale contatto precedente dalla cache
                 ContactDTO vecchio = cacheContatti.get(id.longValue());
                 boolean modificato = vecchio == null ||
                         !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY()) ||
@@ -378,15 +378,13 @@ public class ContactService {
                 if (modificato) {
                     LeadRequest req = new LeadRequest();
 
-                    // 👇 Conversione NAME → Long sicura
-                    Long contactId = parseLongSafe(nuovo.getNAME());
-                    if (contactId == null) {
-                        logger.warn("⚠️ NAME non numerico per contatto {}: {}", id, nuovo.getNAME());
-                        continue;
-                    }
+                    // ✅ Usa l’ID Bitrix24 come identificativo
+                    req.setContactId(id.longValue());
 
-                    req.setContactId(contactId);
-                    req.setWorkedCode(extractPrimaryPhone(nuovo)); // ✅ telefono principale
+                    // ✅ Estrae il primo numero di telefono
+                    String telefono = extractPrimaryPhone(nuovo);
+                    req.setWorkedCode(telefono);
+
                     req.setWorked_Date(LocalDateTime.now());
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
