@@ -28,6 +28,7 @@ public class DealService {
     private static final Logger logger = LoggerFactory.getLogger(DealService.class);
 
     
+    @Autowired
     public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper, @Lazy ActivityService activityService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
@@ -253,63 +254,47 @@ public class DealService {
         return dealConAttivitaModificate;
     }
 
-    public List<Long> getContattiDaDeal(Long dealId) {
-    String url = baseUrl + "/rest/9/1uuo825zp4af6sha/crm.deal.contact.items.get.json";
-    int maxTentativi = 5;
-    long backoffMs = 2000L; // 2 secondi di base
+    private void sleepSafe(long millis) {
+        try { Thread.sleep(millis); } catch (InterruptedException ignored) {}
+    }
 
-    for (int tentativo = 1; tentativo <= maxTentativi; tentativo++) {
+    public List<Long> getContattiDaDeal(Long dealId) {
         try {
+            String url = baseUrl + "/rest/9/1uuo825zp4af6sha/crm.deal.contact.items.get.json";
             Map<String, Object> requestBody = Map.of("id", dealId);
+
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
 
-            Map<String, Object> body = extractAndValidateBody(response);
+            Map<String, Object> body = response.getBody();
+            if (body == null || !body.containsKey("result")) return Collections.emptyList();
+
+            List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
             List<Long> contatti = new ArrayList<>();
 
-            if (body.containsKey("result")) {
-                List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
-                for (Map<String, Object> contact : results) {
-                    Object id = contact.get("CONTACT_ID");
-                    if (id != null) contatti.add(Long.valueOf(id.toString()));
-                }
+            for (Map<String, Object> contact : results) {
+                if (contact.get("CONTACT_ID") != null)
+                    contatti.add(Long.valueOf(contact.get("CONTACT_ID").toString()));
             }
 
             logger.info("Deal {} collegato a {} contatti", dealId, contatti.size());
+
+            // Rate limit friendly delay
+            sleepSafe(500);
             return contatti;
 
         } catch (HttpServerErrorException e) {
-            String body = e.getResponseBodyAsString();
-
-            if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE &&
-                body != null && body.contains("QUERY_LIMIT_EXCEEDED")) {
-
-                long waitTime = backoffMs * tentativo;
-                logger.warn("Rate limit Bitrix24 raggiunto (tentativo {}/{}). Attendo {} ms prima del retry...",
-                        tentativo, maxTentativi, waitTime);
-
-                try {
-                    Thread.sleep(waitTime);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    logger.error("Thread interrotto durante il backoff", ie);
-                    break;
-                }
-
-            } else {
-                logger.error("Errore HTTP durante il recupero contatti per deal {}: {}", dealId, e.getMessage());
-                break;
+            if (e.getResponseBodyAsString().contains("QUERY_LIMIT_EXCEEDED")) {
+                logger.warn("⏸️ Rate limit Bitrix24 raggiunto. Attesa 60 secondi...");
+                sleepSafe(60_000);
             }
-
+            logger.error("Errore 503 nel recupero contatti per deal {}", dealId, e);
+            return Collections.emptyList();
         } catch (Exception e) {
-            logger.error("Errore generico nel recupero contatti per deal {}", dealId, e);
-            break;
+            logger.error("Errore nel recupero contatti per deal {}", dealId, e);
+            return Collections.emptyList();
         }
     }
-
-    logger.error("Impossibile recuperare contatti per deal {} dopo più tentativi", dealId);
-    return Collections.emptyList();
-}
 
 
 
