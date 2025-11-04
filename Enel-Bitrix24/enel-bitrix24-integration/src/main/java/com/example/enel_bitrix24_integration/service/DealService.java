@@ -15,11 +15,12 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class DealService {
 
-     public final Map<Long, ActivityDTO> cacheAttivita = new ConcurrentHashMap<>();
+    public final Map<Long, ActivityDTO> cacheAttivita = new ConcurrentHashMap<>();
 
     private final RestTemplate restTemplate;
     private final String baseUrl;
@@ -224,8 +225,7 @@ public class DealService {
         }
     }
 
-    // Cache locale per attività
-    final Map<Long, ActivityDTO> cacheAttivita = new HashMap<>();
+
 
     public List<Long> trovaDealConAttivitaModificate() {
         List<Long> dealConAttivitaModificate = new ArrayList<>();
