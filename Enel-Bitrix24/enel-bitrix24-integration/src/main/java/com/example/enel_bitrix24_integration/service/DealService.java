@@ -19,6 +19,8 @@ import java.util.*;
 @Service
 public class DealService {
 
+     public final Map<Long, ActivityDTO> cacheAttivita = new ConcurrentHashMap<>();
+
     private final RestTemplate restTemplate;
     private final String baseUrl;
     private final String  webHookUrl;
