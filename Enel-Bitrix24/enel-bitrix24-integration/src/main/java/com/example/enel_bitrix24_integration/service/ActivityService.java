@@ -21,18 +21,20 @@ public class ActivityService {
     private final RestTemplate restTemplate;
     private final String baseUrl;
     private final String  webHookUrl;
+    private final DealService dealService;
     
 
     private static final Logger logger = LoggerFactory.getLogger(ActivityService.class);
 
-    public ActivityService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl,@Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl) {
+    public ActivityService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ContactService contactService, DealService dealService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
+        this.dealService = dealService;
     }
 
 
-     public List<ActivityDTO> getActivityList(Map<String, Object> filter, List<String> select, int start) {
+    public List<ActivityDTO> getActivityList(Map<String, Object> filter, List<String> select, int start) {
         try {
             String url = baseUrl + "/rest/9/27wvf2b46se5233m/crm.activity.list.json";
 
@@ -119,6 +121,57 @@ public class ActivityService {
         }
     }
 
+    public Set<Long> trovaContattiInAttesaDaAttivitaModificate() {
+        Set<Long> contattiInAttesa = new HashSet<>();
+        Map<Long, List<ActivityDTO>> dealAttivitaMap = new HashMap<>();
+
+        try {
+            int start = 0;
+            boolean continua = true;
+
+            // 1️⃣ Recupero tutte le attività modificate
+            while (continua) {
+                Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2); // 2 = Deal
+                List<ActivityDTO> activities = getActivityList(filter, null, start);
+
+                if (activities.isEmpty()) break;
+
+                for (ActivityDTO nuova : activities) {
+                    ActivityDTO vecchia = dealService.cacheAttivita.get(nuova.getId());
+                    boolean modificata = vecchia == null || !Objects.equals(vecchia.getDateModify(), nuova.getDateModify());
+
+                    if (modificata) {
+                        dealService.cacheAttivita.put(nuova.getId(), nuova);
+                        if (nuova.getOwnerId() != null) {
+                            dealAttivitaMap.computeIfAbsent(nuova.getOwnerId(), k -> new ArrayList<>()).add(nuova);
+                        }
+                    }
+                }
+
+                // Pagination Bitrix24
+                if (activities.size() < 50) {
+                    continua = false;
+                } else {
+                    start += activities.size();
+                }
+            }
+
+            // 2️⃣ Recupero contatti per ogni deal modificato (una sola chiamata per deal)
+            for (Long dealId : dealAttivitaMap.keySet()) {
+                List<Long> contatti = dealService.getContattiDaDeal(dealId);
+                if (!contatti.isEmpty()) {
+                    contattiInAttesa.addAll(contatti);
+                    logger.info("🔁 Deal {} con {} contatti aggiunti alla lista in attesa", dealId, contatti.size());
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Errore durante il recupero dei contatti da attività modificate", e);
+        }
+
+        return contattiInAttesa;
+    }
+
 
     /**
      * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
@@ -182,5 +235,7 @@ public class ActivityService {
         return body;
     }
 
+
 }
+
 
