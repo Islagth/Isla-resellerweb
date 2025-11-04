@@ -1,5 +1,5 @@
 # ===== FASE 1: Build con Maven =====
-FROM eclipse-temurin:21-jdk AS builder
+FROM openjdk:21-slim  AS builder
 WORKDIR /app
 
 # Copia il POM e scarica le dipendenze
