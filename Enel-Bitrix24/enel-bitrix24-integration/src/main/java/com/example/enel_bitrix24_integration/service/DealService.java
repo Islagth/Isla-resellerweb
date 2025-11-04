@@ -1,17 +1,5 @@
 package com.example.enel_bitrix24_integration.service;
 
-import com.example.enel_bitrix24_integration.dto.ActivityDTO;
-import com.example.enel_bitrix24_integration.dto.DealDTO;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
@@ -253,9 +241,12 @@ public class DealService {
     }
 
     public List<Long> getContattiDaDeal(Long dealId) {
-        try {
-            String url = baseUrl + "/rest/9/1uuo825zp4af6sha/crm.deal.contact.items.get.json";
+    String url = baseUrl + "/rest/9/1uuo825zp4af6sha/crm.deal.contact.items.get.json";
+    int maxTentativi = 5;
+    long backoffMs = 2000L; // 2 secondi di base
 
+    for (int tentativo = 1; tentativo <= maxTentativi; tentativo++) {
+        try {
             Map<String, Object> requestBody = Map.of("id", dealId);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
@@ -266,19 +257,47 @@ public class DealService {
             if (body.containsKey("result")) {
                 List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
                 for (Map<String, Object> contact : results) {
-                    if (contact.get("CONTACT_ID") != null)
-                        contatti.add(Long.valueOf(contact.get("CONTACT_ID").toString()));
+                    Object id = contact.get("CONTACT_ID");
+                    if (id != null) contatti.add(Long.valueOf(id.toString()));
                 }
             }
 
             logger.info("Deal {} collegato a {} contatti", dealId, contatti.size());
             return contatti;
 
+        } catch (HttpServerErrorException e) {
+            String body = e.getResponseBodyAsString();
+
+            if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE &&
+                body != null && body.contains("QUERY_LIMIT_EXCEEDED")) {
+
+                long waitTime = backoffMs * tentativo;
+                logger.warn("Rate limit Bitrix24 raggiunto (tentativo {}/{}). Attendo {} ms prima del retry...",
+                        tentativo, maxTentativi, waitTime);
+
+                try {
+                    Thread.sleep(waitTime);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    logger.error("Thread interrotto durante il backoff", ie);
+                    break;
+                }
+
+            } else {
+                logger.error("Errore HTTP durante il recupero contatti per deal {}: {}", dealId, e.getMessage());
+                break;
+            }
+
         } catch (Exception e) {
-            logger.error("Errore nel recupero contatti per deal {}", dealId, e);
-            return Collections.emptyList();
+            logger.error("Errore generico nel recupero contatti per deal {}", dealId, e);
+            break;
         }
     }
+
+    logger.error("Impossibile recuperare contatti per deal {} dopo più tentativi", dealId);
+    return Collections.emptyList();
+}
+
 
 
 
