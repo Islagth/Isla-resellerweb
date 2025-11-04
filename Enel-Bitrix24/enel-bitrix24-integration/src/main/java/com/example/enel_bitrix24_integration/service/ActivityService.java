@@ -32,7 +32,7 @@ public class ActivityService {
     }
 
 
-    public List<ActivityDTO> getActivityList(Map<String, Object> filter, List<String> select, int start) {
+     public List<ActivityDTO> getActivityList(Map<String, Object> filter, List<String> select, int start) {
         try {
             String url = baseUrl + "/rest/9/27wvf2b46se5233m/crm.activity.list.json";
 
@@ -52,6 +52,7 @@ public class ActivityService {
             List<ActivityDTO> activities = new ArrayList<>();
 
             if (body.containsKey("result")) {
+                @SuppressWarnings("unchecked")
                 List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
 
                 for (Map<String, Object> item : results) {
@@ -59,13 +60,13 @@ public class ActivityService {
                     dto.setId(Long.valueOf(item.get("ID").toString()));
                     dto.setOwnerId(item.get("OWNER_ID") != null ? Long.valueOf(item.get("OWNER_ID").toString()) : null);
                     dto.setOwnerTypeId(item.get("OWNER_TYPE_ID") != null ? Integer.valueOf(item.get("OWNER_TYPE_ID").toString()) : null);
-                    dto.setTypeId((String) item.get("TYPE_ID"));
+                    dto.setTypeId(item.get("TYPE_ID") != null ? item.get("TYPE_ID").toString() : null);
                     dto.setDescription((String) item.get("DESCRIPTION"));
                     dto.setSubject((String) item.get("SUBJECT"));
                     dto.setStatus((String) item.get("STATUS"));
                     dto.setResponsibleId(item.get("RESPONSIBLE_ID") != null ? Long.valueOf(item.get("RESPONSIBLE_ID").toString()) : null);
 
-                    // ✅ Conversione sicura delle date
+                    // ✅ Conversione sicura delle date Bitrix (ISO 8601)
                     dto.setDateModify(parseDateSafely(Objects.toString(item.get("DATE_MODIFY"), "")));
                     dto.setStartTime(parseDateSafely(Objects.toString(item.get("START_TIME"), "")));
                     dto.setEndTime(parseDateSafely(Objects.toString(item.get("END_TIME"), "")));
@@ -74,50 +75,50 @@ public class ActivityService {
                 }
             }
 
-            logger.info("Recuperate {} attività da Bitrix24", activities.size());
+            logger.info("📋 Recuperate {} attività da Bitrix24", activities.size());
             return activities;
 
         } catch (Exception e) {
-            logger.error("Errore durante il recupero delle attività da Bitrix24", e);
+            logger.error("❌ Errore durante il recupero delle attività da Bitrix24", e);
             return Collections.emptyList();
         }
     }
 
     public ActivityDTO getUltimaActivityPerContatto(Integer contactId) {
         try {
-            Map<String, Object> filter = Map.of(
-                    "OWNER_ID", contactId,
-                    "OWNER_TYPE_ID", 3, // 3 = Contact in Bitrix CRM
-                    "TYPE_ID", "CALL"
+            Map<String, Object> filter = new HashMap<>();
+            filter.put("OWNER_ID", contactId);
+            filter.put("OWNER_TYPE_ID", 3); // 3 = Contact in Bitrix CRM
+            filter.put("TYPE_ID", "CALL");
+
+            List<String> select = List.of(
+                    "ID", "OWNER_ID", "TYPE_ID", "START_TIME", "END_TIME", "DATE_MODIFY", "SUBJECT", "DESCRIPTION"
             );
 
-            Map<String, Object> result = (Map<String, Object>) getActivityList(filter, List.of("ID", "START_TIME", "END_TIME", "SUBJECT", "DESCRIPTION"), 0);
+            // ✅ Recupera la lista di attività dal metodo principale
+            List<ActivityDTO> activities = getActivityList(filter, select, 0);
 
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
-
-            if (lista == null || lista.isEmpty()) {
+            if (activities == null || activities.isEmpty()) {
+                logger.info("ℹ️ Nessuna activity trovata per il contatto {}", contactId);
                 return null;
             }
 
-            Map<String, Object> activityMap = lista.get(0); // prendi la più recente (eventualmente ordina per ID o DATE_MODIFY)
-            ActivityDTO activity = new ActivityDTO();
-            activity.setId(Long.valueOf(String.valueOf(activityMap.get("ID"))));
-            activity.setOwnerId(contactId.longValue());
-            activity.setTypeId("CALL");
+            // ✅ Ordina per data di modifica o fine chiamata (più recente per prima)
+            activities.sort(Comparator.comparing(
+                    (ActivityDTO a) -> Optional.ofNullable(a.getDateModify()).orElse(a.getEndTime()),
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            ).reversed());
 
-            // parsing date Bitrix → LocalDateTime
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-            activity.setStartTime(LocalDateTime.parse((String) activityMap.get("START_TIME"), formatter));
-            activity.setEndTime(LocalDateTime.parse((String) activityMap.get("END_TIME"), formatter));
-
-            return activity;
+            ActivityDTO ultima = activities.get(0);
+            logger.info("📞 Ultima activity per contatto {} → ID: {}, modificata il {}", contactId, ultima.getId(), ultima.getDateModify());
+            return ultima;
 
         } catch (Exception e) {
-            logger.warn("⚠️ Errore nel recupero dell’activity per contatto {}: {}", contactId, e.getMessage());
+            logger.warn("⚠️ Errore nel recupero dell’ultima activity per contatto {}: {}", contactId, e.getMessage());
             return null;
         }
     }
+
 
     /**
      * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
@@ -182,3 +183,4 @@ public class ActivityService {
     }
 
 }
+
