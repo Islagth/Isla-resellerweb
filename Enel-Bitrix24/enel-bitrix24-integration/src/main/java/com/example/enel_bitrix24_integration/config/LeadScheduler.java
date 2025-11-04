@@ -75,12 +75,14 @@ public class LeadScheduler {
     /**
      * 🔄 Ogni 15 minuti controlla i contatti modificati in Bitrix e li aggiunge alla coda
      */
-    @Scheduled(fixedRate = 900000)
+    @Scheduled(fixedRate = 900_000)
     public void controllaModifiche() {
         logger.info("⏰ Avvio controllo periodico modifiche contatti e attività deal...");
 
         try {
-            // 1️⃣ Controllo contatti modificati
+            Set<Long> contattiInAttesa = new HashSet<>();
+
+            // 1️⃣ Contatti modificati direttamente
             List<LeadRequest> contattiAggiornati = contactService.trovaContattiModificati();
             for (LeadRequest lead : contattiAggiornati) {
                 Long contactId = lead.getContactId();
@@ -91,71 +93,47 @@ public class LeadScheduler {
 
                 if (modificato) {
                     contattiCache.put(contactId, nuovoResultCode);
-
-                    // 🔍 Recupera l’ultima activity associata al contatto
-                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(Math.toIntExact(contactId));
-
-                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
-                        lead.setWorked_Date(ultimaActivity.getStartTime());
-                        lead.setWorked_End_Date(ultimaActivity.getEndTime());
-                    } else {
-                        lead.setWorked_Date(LocalDateTime.now());
-                        lead.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
-                    }
-
-                    // Aggiunge alla coda di invio
-                    aggiungiContatto(lead);
-                    logger.info("📇 Contatto {} aggiunto alla coda invii automatici", contactId);
+                    contattiInAttesa.add(contactId);
+                    logger.info("📇 Contatto {} modificato direttamente aggiunto alla lista in attesa", contactId);
                 }
             }
 
-            // 2️⃣ Controllo attività nuove o modificate collegate ai deal
-            Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2); // 2 = Deal
-            List<ActivityDTO> attivita = activityService.getActivityList(filter, null, 0);
-            Set<Long> dealConAttivitaModificate = new HashSet<>();
+            // 2️⃣ Contatti derivati da attività modificate sui deal
+            Set<Long> contattiDaAttivita = activityService.trovaContattiInAttesaDaAttivitaModificate();
+            contattiInAttesa.addAll(contattiDaAttivita);
 
-            for (ActivityDTO nuova : attivita) {
-                ActivityDTO vecchia = attivitaCache.get(nuova.getId());
-                boolean modificata = (vecchia == null ||
-                        !Objects.equals(vecchia.getDateModify(), nuova.getDateModify()));
+            // 3️⃣ Ciclo su tutti i contatti in attesa
+            Map<Long, String> resultCodeCacheTemp = new HashMap<>(); // cache temporanea per chiamate getResultCode
+            for (Long contactId : contattiInAttesa) {
+                LeadRequest req = new LeadRequest();
+                req.setContactId(contactId);
+                req.setWorkedCode("AUTO_FROM_SCHEDULER");
+                req.setResultCode(ResultCode.D102);
+                req.setCaller("AUTO_SCHEDULER");
+                req.setWorkedType("O");
 
-                if (modificata) {
-                    attivitaCache.put(nuova.getId(), nuova);
-                    if (nuova.getOwnerId() != null) {
-                        dealConAttivitaModificate.add(nuova.getOwnerId());
-                        logger.info("📝 Attività {} modificata o nuova → Deal {}", nuova.getId(), nuova.getOwnerId());
-                    }
+                // Recupera RESULT_CODE dinamicamente se non presente in cache temporanea
+                String resultCode = resultCodeCacheTemp.computeIfAbsent(contactId, id -> contactService.getResultCodeForContact(Math.toIntExact(id)));
+                req.setResultCode(resultCode != null ? ResultCode.valueOf(resultCode) : ResultCode.D102);
+
+                // Recupera ultima attività associata
+                ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(Math.toIntExact(contactId));
+                if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                    req.setWorked_Date(ultimaActivity.getStartTime());
+                    req.setWorked_End_Date(ultimaActivity.getEndTime());
+                } else {
+                    req.setWorked_Date(LocalDateTime.now());
+                    req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
                 }
-            }
 
-            // 3️⃣ Recupera i contatti collegati ai deal modificati
-            for (Long dealId : dealConAttivitaModificate) {
-                List<Long> contattiDaDeal = dealService.getContattiDaDeal(dealId);
-                for (Long contactId : contattiDaDeal) {
-                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(Math.toIntExact(contactId));
-                    LeadRequest req = new LeadRequest();
-                    req.setContactId(contactId);
-                    req.setWorkedCode("AUTO_FROM_DEAL");
-                    req.setResultCode(ResultCode.D102);
-                    req.setCaller("AUTO_SCHEDULER");
-                    req.setWorkedType("O");
-
-                    if (ultimaActivity != null) {
-                        req.setWorked_Date(ultimaActivity.getStartTime());
-                        req.setWorked_End_Date(ultimaActivity.getEndTime());
-                    } else {
-                        req.setWorked_Date(LocalDateTime.now());
-                        req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
-                    }
-
-                    aggiungiContatto(req);
-                }
+                aggiungiContatto(req);
+                logger.info("📋 Contatto {} aggiunto alla coda invii automatici", contactId);
             }
 
             if (contattiInAttesa.isEmpty()) {
                 logger.info("✅ Nessun contatto in attesa rilevato in questo ciclo");
             } else {
-                logger.info("📋 Totale contatti in attesa: {}", contattiInAttesa.size());
+                logger.info("📌 Totale contatti in attesa: {}", contattiInAttesa.size());
             }
 
         } catch (Exception e) {
@@ -164,6 +142,8 @@ public class LeadScheduler {
 
         logger.info("✅ Controllo completato.\n");
     }
+
+
 
 
 
