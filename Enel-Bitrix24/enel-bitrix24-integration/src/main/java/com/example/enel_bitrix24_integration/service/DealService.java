@@ -1,5 +1,6 @@
 package com.example.enel_bitrix24_integration.service;
 
+import com.example.enel_bitrix24_integration.dto.ActivityDTO;
 import com.example.enel_bitrix24_integration.dto.DealDTO;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -213,6 +214,67 @@ public class DealService {
             throw new RuntimeException("Errore nella chiamata REST per collegare contatto e deal: " + e.getMessage(), e);
         }
     }
+
+    // Cache locale per attività
+    private final Map<Long, ActivityDTO> cacheAttivita = new HashMap<>();
+
+    public List<Long> trovaDealConAttivitaModificate() {
+        List<Long> dealConAttivitaModificate = new ArrayList<>();
+
+        try {
+            Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2); // 2 = Deal in Bitrix24
+            List<ActivityDTO> activities = activityService.getActivityList(filter, null, 0);
+
+            for (ActivityDTO nuova : activities) {
+                ActivityDTO vecchia = cacheAttivita.get(nuova.getId());
+
+                boolean modificata = vecchia == null ||
+                        !Objects.equals(vecchia.getDateModify(), nuova.getDateModify());
+
+                if (modificata) {
+                    cacheAttivita.put(nuova.getId(), nuova);
+                    if (nuova.getOwnerId() != null) {
+                        dealConAttivitaModificate.add(nuova.getOwnerId());
+                        logger.info("🔁 Attività {} modificata o nuova → Deal {}", nuova.getId(), nuova.getOwnerId());
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Errore durante il controllo delle attività modificate", e);
+        }
+
+        return dealConAttivitaModificate;
+    }
+
+    public List<Long> getContattiDaDeal(Long dealId) {
+        try {
+            String url = baseUrl + "/rest/9/1uuo825zp4af6sha/crm.deal.contact.items.get.json";
+
+            Map<String, Object> requestBody = Map.of("id", dealId);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+
+            Map<String, Object> body = extractAndValidateBody(response);
+            List<Long> contatti = new ArrayList<>();
+
+            if (body.containsKey("result")) {
+                List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
+                for (Map<String, Object> contact : results) {
+                    if (contact.get("CONTACT_ID") != null)
+                        contatti.add(Long.valueOf(contact.get("CONTACT_ID").toString()));
+                }
+            }
+
+            logger.info("Deal {} collegato a {} contatti", dealId, contatti.size());
+            return contatti;
+
+        } catch (Exception e) {
+            logger.error("Errore nel recupero contatti per deal {}", dealId, e);
+            return Collections.emptyList();
+        }
+    }
+
 
 
 
