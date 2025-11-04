@@ -93,50 +93,50 @@ public class LeadScheduler {
         try {
             Set<Long> contattiAggiornati = new HashSet<>();
 
-            // 1️⃣ Contatti modificati
-            List<LeadRequest> leads = contactService.trovaContattiModificati();
-            for (LeadRequest lead : leads) {
-                Long id = lead.getContactId();
-                String nuovo = String.valueOf(lead.getResultCode());
-                String vecchio = contattiCache.get(id);
-
-                if (vecchio == null || !vecchio.equals(nuovo)) {
-                    contattiCache.put(id, nuovo);
-                    contattiAggiornati.add(id);
-                    logger.info("📇 Contatto {} modificato aggiunto alla lista", id);
+            // 1️⃣ Contatti modificati (gestiti internamente dal ContactService)
+            List<LeadRequest> leadsModificati = contactService.trovaContattiModificati();
+            if (leadsModificati.isEmpty()) {
+                logger.info("📭 Nessun contatto modificato rilevato.");
+            } else {
+                for (LeadRequest lead : leadsModificati) {
+                    contattiAggiornati.add(lead.getContactId());
+                    contattiInAttesa.add(lead); // già completo dal ContactService
+                    logger.info("📇 Contatto {} aggiunto dai contatti modificati (ResultCode: {})",
+                            lead.getContactId(), lead.getResultCode());
+                    sleepSafe(300);
                 }
-
-                sleepSafe(300); // rallenta per Bitrix
             }
 
-            // 2️⃣ Attività modificate
+            // 2️⃣ Attività modificate → ottieni i contatti collegati
             Set<Long> contattiDaAttivita = activityService.trovaContattiInAttesaDaAttivitaModificate();
-            contattiAggiornati.addAll(contattiDaAttivita);
-
-            // 3️⃣ Aggiungi contatti in attesa
-            for (Long contactId : contattiAggiornati) {
-                LeadRequest req = new LeadRequest();
-                req.setContactId(contactId);
-                req.setWorkedCode("AUTO_FROM_SCHEDULER");
-                req.setResultCode(ResultCode.D102);
-                req.setCaller("AUTO_SCHEDULER");
-                req.setWorkedType("O");
-
-                contattiInAttesa.add(req);
-                sleepSafe(300);
+            if (!contattiDaAttivita.isEmpty()) {
+                contattiAggiornati.addAll(contattiDaAttivita);
+                for (Long contactId : contattiDaAttivita) {
+                    LeadRequest req = new LeadRequest();
+                    req.setContactId(contactId);
+                    req.setWorkedCode("AUTO_FROM_SCHEDULER");
+                    req.setCaller("AUTO_SCHEDULER");
+                    req.setResultCode(ResultCode.D102); // Default solo se non c'è altro
+                    req.setWorkedType("O");
+                    req.setWorked_Date(LocalDateTime.now());
+                    req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                    contattiInAttesa.add(req);
+                    logger.info("🟡 Contatto {} aggiunto da attività modificata", contactId);
+                    sleepSafe(300);
+                }
             }
 
-            logger.info("✅ Totale contatti in attesa dopo controllo: {}", contattiInAttesa.size());
+            // 3️⃣ Log finale
+            logger.info("✅ Totale contatti aggiornati: {}", contattiAggiornati.size());
+            logger.info("✅ Totale contatti in attesa: {}", contattiInAttesa.size());
 
         } catch (Exception e) {
             logger.error("❌ Errore durante controllo periodico modifiche contatti/attività", e);
         } finally {
             inEsecuzione = false;
+            logger.info("🏁 Controllo completato.");
         }
-
-        logger.info("✅ Controllo completato.");
     }
-
 
 
 
