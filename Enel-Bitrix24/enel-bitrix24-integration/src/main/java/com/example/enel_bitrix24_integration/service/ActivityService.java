@@ -83,6 +83,42 @@ public class ActivityService {
         }
     }
 
+    public ActivityDTO getUltimaActivityPerContatto(Integer contactId) {
+        try {
+            Map<String, Object> filter = Map.of(
+                    "OWNER_ID", contactId,
+                    "OWNER_TYPE_ID", 3, // 3 = Contact in Bitrix CRM
+                    "TYPE_ID", "CALL"
+            );
+
+            Map<String, Object> result = (Map<String, Object>) getActivityList(filter, List.of("ID", "START_TIME", "END_TIME", "SUBJECT", "DESCRIPTION"), 0);
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
+
+            if (lista == null || lista.isEmpty()) {
+                return null;
+            }
+
+            Map<String, Object> activityMap = lista.get(0); // prendi la più recente (eventualmente ordina per ID o DATE_MODIFY)
+            ActivityDTO activity = new ActivityDTO();
+            activity.setId(Long.valueOf(String.valueOf(activityMap.get("ID"))));
+            activity.setOwnerId(contactId.longValue());
+            activity.setTypeId("CALL");
+
+            // parsing date Bitrix → LocalDateTime
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+            activity.setStartTime(LocalDateTime.parse((String) activityMap.get("START_TIME"), formatter));
+            activity.setEndTime(LocalDateTime.parse((String) activityMap.get("END_TIME"), formatter));
+
+            return activity;
+
+        } catch (Exception e) {
+            logger.warn("⚠️ Errore nel recupero dell’activity per contatto {}: {}", contactId, e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
      * Gestisce sia formati "yyyy-MM-dd HH:mm:ss" che ISO (es. 2025-11-04T15:31:20Z)
