@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class ContactService {
     // Cache in memoria dell'ultimo stato noto (in produzione -> Redis o DB)
     private final Map<Long, ContactDTO> cacheContatti = new ConcurrentHashMap<>();
 
+    @Autowired
     public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper, ActivityService activityService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
