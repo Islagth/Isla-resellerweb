@@ -26,7 +26,7 @@ public class ActivityService {
 
     private static final Logger logger = LoggerFactory.getLogger(ActivityService.class);
 
-    public ActivityService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ContactService contactService, DealService dealService) {
+    public ActivityService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, DealService dealService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
@@ -237,5 +237,6 @@ public class ActivityService {
 
 
 }
+
 
 
