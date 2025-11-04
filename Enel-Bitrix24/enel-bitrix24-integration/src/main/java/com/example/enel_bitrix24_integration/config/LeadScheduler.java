@@ -3,6 +3,7 @@ package com.example.enel_bitrix24_integration.config;
 import com.example.enel_bitrix24_integration.dto.ActivityDTO;
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
 import com.example.enel_bitrix24_integration.dto.LeadResponse;
+import com.example.enel_bitrix24_integration.dto.ResultCode;
 import com.example.enel_bitrix24_integration.service.ActivityService;
 import com.example.enel_bitrix24_integration.service.BitrixService;
 import com.example.enel_bitrix24_integration.service.ContactService;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -77,22 +79,33 @@ public class LeadScheduler {
     public void controllaModifiche() {
         logger.info("⏰ Avvio controllo periodico modifiche contatti e attività deal...");
 
-        Set<Long> contattiInAttesa = new HashSet<>();
-
         try {
             // 1️⃣ Controllo contatti modificati
             List<LeadRequest> contattiAggiornati = contactService.trovaContattiModificati();
             for (LeadRequest lead : contattiAggiornati) {
                 Long contactId = lead.getContactId();
                 String nuovoResultCode = String.valueOf(lead.getResultCode());
-
                 String vecchioResultCode = contattiCache.get(contactId);
+
                 boolean modificato = (vecchioResultCode == null || !Objects.equals(vecchioResultCode, nuovoResultCode));
 
                 if (modificato) {
                     contattiCache.put(contactId, nuovoResultCode);
-                    contattiInAttesa.add(contactId);
-                    logger.info("📇 Contatto {} modificato (resultCode: {})", contactId, nuovoResultCode);
+
+                    // 🔍 Recupera l’ultima activity associata al contatto
+                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(Math.toIntExact(contactId));
+
+                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                        lead.setWorked_Date(ultimaActivity.getStartTime());
+                        lead.setWorked_End_Date(ultimaActivity.getEndTime());
+                    } else {
+                        lead.setWorked_Date(LocalDateTime.now());
+                        lead.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                    }
+
+                    // Aggiunge alla coda di invio
+                    aggiungiContatto(lead);
+                    logger.info("📇 Contatto {} aggiunto alla coda invii automatici", contactId);
                 }
             }
 
@@ -115,18 +128,34 @@ public class LeadScheduler {
                 }
             }
 
-            // 3️⃣ Recupero i contatti collegati ai deal con attività modificate
+            // 3️⃣ Recupera i contatti collegati ai deal modificati
             for (Long dealId : dealConAttivitaModificate) {
                 List<Long> contattiDaDeal = dealService.getContattiDaDeal(dealId);
-                contattiInAttesa.addAll(contattiDaDeal);
+                for (Long contactId : contattiDaDeal) {
+                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(Math.toIntExact(contactId));
+                    LeadRequest req = new LeadRequest();
+                    req.setContactId(contactId);
+                    req.setWorkedCode("AUTO_FROM_DEAL");
+                    req.setResultCode(ResultCode.D102);
+                    req.setCaller("AUTO_SCHEDULER");
+                    req.setWorkedType("O");
+
+                    if (ultimaActivity != null) {
+                        req.setWorked_Date(ultimaActivity.getStartTime());
+                        req.setWorked_End_Date(ultimaActivity.getEndTime());
+                    } else {
+                        req.setWorked_Date(LocalDateTime.now());
+                        req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                    }
+
+                    aggiungiContatto(req);
+                }
             }
 
-            // 4️⃣ Stampa finale dei contatti in attesa
-            if (!contattiInAttesa.isEmpty()) {
-                logger.info("📋 Totale contatti in attesa: {}", contattiInAttesa.size());
-                logger.info("🧾 Lista contatti in attesa: {}", contattiInAttesa);
-            } else {
+            if (contattiInAttesa.isEmpty()) {
                 logger.info("✅ Nessun contatto in attesa rilevato in questo ciclo");
+            } else {
+                logger.info("📋 Totale contatti in attesa: {}", contattiInAttesa.size());
             }
 
         } catch (Exception e) {
@@ -135,6 +164,7 @@ public class LeadScheduler {
 
         logger.info("✅ Controllo completato.\n");
     }
+
 
 
     /**
@@ -162,3 +192,4 @@ public class LeadScheduler {
         logger.info("🧹 Lista contatti svuotata dopo l’invio orario.");
     }
 }
+
