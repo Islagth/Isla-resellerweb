@@ -323,7 +323,9 @@ public class ContactService {
             // 🔹 Recupera contatti attivi da Bitrix24
             Map<String, Object> filter = Map.of("ACTIVE", "Y");
             Map<String, Object> result = listaContatti(
-                    filter, null, List.of("ID", "NAME", "PHONE", "DATE_MODIFY"), 0
+                    filter, null,
+                    List.of("ID", "NAME", "PHONE", "DATE_MODIFY", "UF_CRM_RESULT_CODE"), // 👈 aggiungi qui
+                    0
             );
 
             @SuppressWarnings("unchecked")
@@ -369,8 +371,12 @@ public class ContactService {
                 }
 
                 // 🔹 Recupera codice risultato custom (UF_CRM_RESULT_CODE)
-                String resultCodeValue = Optional.ofNullable(getResultCodeForContact(id)).orElse("UNKNOWN");
-                nuovo.setRESULT_CODE(ResultCode.valueOf(resultCodeValue));
+                String resultCodeValue = (String) contattoMap.get("UF_CRM_RESULT_CODE");
+                if (resultCodeValue == null) {
+                    logger.warn("⚠️ Contatto {} senza campo UF_CRM_RESULT_CODE", id);
+                    resultCodeValue = "UNKNOWN";
+                }
+                nuovo.setRESULT_CODE(ResultCode.fromString(resultCodeValue));
 
                 // 🔹 Recupera eventuale contatto precedente dalla cache
                 ContactDTO vecchio = cacheContatti.get(id.longValue());
