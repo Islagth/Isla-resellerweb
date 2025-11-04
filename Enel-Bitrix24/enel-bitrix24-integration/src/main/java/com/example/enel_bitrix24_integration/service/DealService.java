@@ -217,7 +217,7 @@ public class DealService {
     }
 
     // Cache locale per attività
-    private final Map<Long, ActivityDTO> cacheAttivita = new HashMap<>();
+    final Map<Long, ActivityDTO> cacheAttivita = new HashMap<>();
 
     public List<Long> trovaDealConAttivitaModificate() {
         List<Long> dealConAttivitaModificate = new ArrayList<>();
