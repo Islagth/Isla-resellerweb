@@ -1,5 +1,5 @@
 # ===== FASE 1: Build con Maven =====
-FROM openjdk:21-slim  AS builder
+FROM eclipse-temurin:21-jdk AS builder
 WORKDIR /app
 
 # Copia il POM e scarica le dipendenze
@@ -11,7 +11,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # ===== FASE 2: Runtime =====
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Copia il JAR costruito nella fase di build
