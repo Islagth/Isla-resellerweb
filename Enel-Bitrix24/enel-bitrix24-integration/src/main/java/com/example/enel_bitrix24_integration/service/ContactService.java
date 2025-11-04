@@ -1,4 +1,5 @@
 package com.example.enel_bitrix24_integration.service;
+import com.example.enel_bitrix24_integration.dto.ActivityDTO;
 import com.example.enel_bitrix24_integration.dto.ContactDTO;
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
 import com.example.enel_bitrix24_integration.dto.ResultCode;
@@ -33,16 +34,18 @@ public class ContactService {
     private final String webHookUrl;
     private final LottoService lottoService;
     private final ObjectMapper objectMapper;
+    private final ActivityService activityService;
 
     // Cache in memoria dell'ultimo stato noto (in produzione -> Redis o DB)
     private final Map<Long, ContactDTO> cacheContatti = new ConcurrentHashMap<>();
 
-    public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper) {
+    public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper, ActivityService activityService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
         this.lottoService = lottoService;
         this.objectMapper = objectMapper;
+        this.activityService = activityService;
     }
 
     // ----------------- CREAZIONE CONTATTO -----------------
@@ -376,23 +379,30 @@ public class ContactService {
                         !Objects.equals(vecchio.getRESULT_CODE(), nuovo.getRESULT_CODE());
 
                 if (modificato) {
+                    // 🔹 Recupera l’ultima activity (chiamata) per il contatto
+                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(id);
+
                     LeadRequest req = new LeadRequest();
-
-                    // ✅ Usa l’ID Bitrix24 come identificativo
                     req.setContactId(id.longValue());
-
-                    // ✅ Estrae il primo numero di telefono
-                    String telefono = extractPrimaryPhone(nuovo);
-                    req.setWorkedCode(telefono);
-
-                    req.setWorked_Date(LocalDateTime.now());
+                    req.setWorkedCode(extractPrimaryPhone(nuovo));
                     req.setResultCode(ResultCode.fromString(resultCodeValue));
                     req.setCaller("AUTO_SCHEDULER");
+
+                    // 🕒 Imposta le date in base all’attività, se presenti
+                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                        req.setWorked_Date(ultimaActivity.getStartTime());
+                        req.setWorked_End_Date(ultimaActivity.getEndTime());
+                    } else {
+                        // fallback se non ci sono activity → ora corrente
+                        req.setWorked_Date(LocalDateTime.now());
+                        req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                        logger.debug("⚙️ Nessuna activity trovata per contatto {}, uso timestamp corrente", id);
+                    }
 
                     modificati.add(req);
                     cacheContatti.put(id.longValue(), nuovo);
 
-                    logger.info("🔄 Contatto {} modificato → aggiunto alla lista invii automatici", id);
+                    logger.info("🔄 Contatto {} modificato → LeadRequest creato", id);
                 }
             }
 
@@ -403,6 +413,7 @@ public class ContactService {
         logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
         return modificati;
     }
+
 
 
     /**
