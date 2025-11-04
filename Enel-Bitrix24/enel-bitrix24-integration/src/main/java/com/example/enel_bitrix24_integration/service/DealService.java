@@ -20,16 +20,17 @@ public class DealService {
     private final String baseUrl;
     private final String  webHookUrl;
     private final ObjectMapper objectMapper;
+    private final ActivityService activityService;
 
     private static final Logger logger = LoggerFactory.getLogger(DealService.class);
 
-    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl,@Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper) {
+    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper, ActivityService activityService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
         this.objectMapper = objectMapper;
+        this.activityService = activityService;
     }
-
     // ----------------- CREAZIONE DEAL -----------------
 
     public Map<String, Integer> creaDealDaLotto(String idLotto, String json) throws Exception {
