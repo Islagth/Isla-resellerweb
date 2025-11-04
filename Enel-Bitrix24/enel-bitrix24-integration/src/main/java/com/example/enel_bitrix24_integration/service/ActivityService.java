@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -175,6 +177,44 @@ public class ActivityService {
         return contattiInAttesa;
     }
 
+    private <T> ResponseEntity<T> callBitrixApiWithRetry(String url, HttpEntity<?> entity, Class<T> responseType) {
+    int maxRetries = 5;
+    int attempt = 0;
+    long waitTime = 1500; // 1.5 secondi iniziali
+
+    while (attempt < maxRetries) {
+        try {
+            return restTemplate.exchange(url, HttpMethod.POST, entity, responseType);
+        } catch (HttpServerErrorException e) {
+            String body = e.getResponseBodyAsString();
+            if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE && body != null && body.contains("QUERY_LIMIT_EXCEEDED")) {
+                attempt++;
+                logger.warn("⏳ Limite Bitrix24 raggiunto (tentativo #{}/{}). Attendo {}ms prima di riprovare...", attempt, maxRetries, waitTime);
+                try {
+                    Thread.sleep(waitTime);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                waitTime *= 2; // backoff esponenziale
+            } else {
+                throw e; // altri errori: interrompi
+            }
+        } catch (ResourceAccessException rae) {
+            // Gestisce timeout di rete
+            attempt++;
+            logger.warn("🌐 Timeout o rete non disponibile (tentativo #{}/{}). Ritento tra {}ms...", attempt, maxRetries, waitTime);
+            try {
+                Thread.sleep(waitTime);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            waitTime *= 2;
+        }
+    }
+
+    throw new RuntimeException("❌ Limite Bitrix24 ancora superato dopo " + maxRetries + " tentativi");
+}
+
 
     /**
      * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
@@ -240,6 +280,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
