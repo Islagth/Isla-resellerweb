@@ -6,7 +6,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,13 +26,15 @@ public class DealService {
 
     private static final Logger logger = LoggerFactory.getLogger(DealService.class);
 
-    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper, ActivityService activityService) {
+    
+    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper, @Lazy ActivityService activityService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
         this.objectMapper = objectMapper;
         this.activityService = activityService;
     }
+
     // ----------------- CREAZIONE DEAL -----------------
 
     public Map<String, Integer> creaDealDaLotto(String idLotto, String json) throws Exception {
