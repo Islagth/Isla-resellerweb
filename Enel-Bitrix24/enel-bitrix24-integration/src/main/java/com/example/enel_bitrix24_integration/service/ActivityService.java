@@ -12,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -37,7 +38,11 @@ public class ActivityService {
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("filter", filter != null ? filter : Collections.emptyMap());
-            requestBody.put("select", select != null ? select : List.of("ID", "OWNER_ID", "OWNER_TYPE_ID", "TYPE_ID", "DATE_MODIFY", "SUBJECT", "DESCRIPTION", "START_TIME", "END_TIME", "RESPONSIBLE_ID", "STATUS"));
+            requestBody.put("select", select != null ? select : List.of(
+                    "ID", "OWNER_ID", "OWNER_TYPE_ID", "TYPE_ID", "DATE_MODIFY",
+                    "SUBJECT", "DESCRIPTION", "START_TIME", "END_TIME",
+                    "RESPONSIBLE_ID", "STATUS"
+            ));
             requestBody.put("start", start);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
@@ -48,6 +53,7 @@ public class ActivityService {
 
             if (body.containsKey("result")) {
                 List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
+
                 for (Map<String, Object> item : results) {
                     ActivityDTO dto = new ActivityDTO();
                     dto.setId(Long.valueOf(item.get("ID").toString()));
@@ -59,14 +65,10 @@ public class ActivityService {
                     dto.setStatus((String) item.get("STATUS"));
                     dto.setResponsibleId(item.get("RESPONSIBLE_ID") != null ? Long.valueOf(item.get("RESPONSIBLE_ID").toString()) : null);
 
-                    // Conversione delle date
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    if (item.get("DATE_MODIFY") != null)
-                        dto.setDateModify(LocalDateTime.parse(item.get("DATE_MODIFY").toString(), formatter));
-                    if (item.get("START_TIME") != null)
-                        dto.setStartTime(LocalDateTime.parse(item.get("START_TIME").toString(), formatter));
-                    if (item.get("END_TIME") != null)
-                        dto.setEndTime(LocalDateTime.parse(item.get("END_TIME").toString(), formatter));
+                    // ✅ Conversione sicura delle date
+                    dto.setDateModify(parseDateSafely(Objects.toString(item.get("DATE_MODIFY"), "")));
+                    dto.setStartTime(parseDateSafely(Objects.toString(item.get("START_TIME"), "")));
+                    dto.setEndTime(parseDateSafely(Objects.toString(item.get("END_TIME"), "")));
 
                     activities.add(dto);
                 }
@@ -79,6 +81,28 @@ public class ActivityService {
             logger.error("Errore durante il recupero delle attività da Bitrix24", e);
             return Collections.emptyList();
         }
+    }
+
+    /**
+     * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
+     * Gestisce sia formati "yyyy-MM-dd HH:mm:ss" che ISO (es. 2025-11-04T15:31:20Z)
+     */
+    private LocalDateTime parseDateSafely(String dateString) {
+        if (dateString == null || dateString.trim().isEmpty()) return null;
+
+        List<DateTimeFormatter> formatters = List.of(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ISO_DATE_TIME
+        );
+
+        for (DateTimeFormatter fmt : formatters) {
+            try {
+                return LocalDateTime.parse(dateString.trim(), fmt);
+            } catch (DateTimeParseException ignored) {}
+        }
+
+        logger.warn("⚠️ Formato data non riconosciuto da Bitrix24: '{}'", dateString);
+        return null;
     }
 
     private HttpHeaders createJsonHeaders() {
