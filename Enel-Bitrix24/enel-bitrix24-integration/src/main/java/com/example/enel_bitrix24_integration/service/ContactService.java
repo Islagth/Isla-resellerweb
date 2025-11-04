@@ -318,15 +318,15 @@ public class ContactService {
     }
 
 
-   public List<LeadRequest> trovaContattiModificati() {
+  public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
 
         try {
-            // 🔹 Recupera contatti attivi da Bitrix24
+            // 🔹 Recupera tutti i contatti attivi da Bitrix24
             Map<String, Object> filter = Map.of("ACTIVE", "Y");
             Map<String, Object> result = listaContatti(
                     filter, null,
-                    List.of("ID", "NAME", "PHONE", "DATE_MODIFY", "RESULT_CODE"), // 👈 aggiungi qui
+                    List.of("ID", "NAME", "PHONE", "DATE_MODIFY", "UF_CRM_RESULT_CODE"),
                     0
             );
 
@@ -348,69 +348,64 @@ public class ContactService {
 
                 String name = (String) contattoMap.get("NAME");
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
-
                 if (dateModify == null || dateModify.isBlank()) {
-                    logger.warn("⚠️ Contatto {} senza data di modifica", id);
                     continue;
                 }
 
-                // 🔹 Crea nuovo oggetto ContactDTO
-                ContactDTO nuovo = new ContactDTO();
-                nuovo.setNAME(name);
-
                 // 🔹 Parsing della data di modifica
+                LocalDateTime dataModifica;
                 try {
-                    OffsetDateTime offsetDateTime = OffsetDateTime.parse(dateModify);
-                    nuovo.setDATE_MODIFY(offsetDateTime.toLocalDateTime());
+                    dataModifica = OffsetDateTime.parse(dateModify).toLocalDateTime();
                 } catch (Exception ex) {
                     try {
                         DateTimeFormatter fallbackFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                        nuovo.setDATE_MODIFY(LocalDateTime.parse(dateModify, fallbackFormatter));
+                        dataModifica = LocalDateTime.parse(dateModify, fallbackFormatter);
                     } catch (Exception innerEx) {
                         logger.warn("❌ Formato data non riconosciuto per contatto {}: {}", id, dateModify);
                         continue;
                     }
                 }
 
-                // 🔹 Recupera codice risultato custom (UF_CRM_RESULT_CODE)
-                String resultCodeValue = (String) contattoMap.get("RESULT_CODE");
-                if (resultCodeValue == null) {
-                    logger.warn("⚠️ Contatto {} senza campo RESULT_CODE", id);
+                // 🔹 Recupera il codice risultato custom (UF_CRM_RESULT_CODE)
+                String resultCodeValue = (String) contattoMap.get("UF_CRM_RESULT_CODE");
+                if (resultCodeValue == null || resultCodeValue.isBlank()) {
                     resultCodeValue = "UNKNOWN";
                 }
-                nuovo.setRESULT_CODE(ResultCode.fromString(resultCodeValue));
 
-                // 🔹 Recupera eventuale contatto precedente dalla cache
+                ResultCode resultCode = ResultCode.fromString(resultCodeValue);
+
+                // 🔹 Crea ContactDTO aggiornato
+                ContactDTO nuovo = new ContactDTO();
+                nuovo.setNAME(name);
+                nuovo.setDATE_MODIFY(dataModifica);
+                nuovo.setRESULT_CODE(resultCode);
+
+                // 🔹 Recupera vecchio contatto dalla cache
                 ContactDTO vecchio = cacheContatti.get(id.longValue());
                 boolean modificato = vecchio == null ||
                         !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY()) ||
                         !Objects.equals(vecchio.getRESULT_CODE(), nuovo.getRESULT_CODE());
 
                 if (modificato) {
-                    // 🔹 Recupera l’ultima activity (chiamata) per il contatto
                     ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(id);
 
                     LeadRequest req = new LeadRequest();
                     req.setContactId(id.longValue());
                     req.setWorkedCode(extractPrimaryPhone(nuovo));
-                    req.setResultCode(ResultCode.fromString(resultCodeValue));
+                    req.setResultCode(resultCode);
                     req.setCaller("AUTO_SCHEDULER");
 
-                    // 🕒 Imposta le date in base all’attività, se presenti
                     if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
                         req.setWorked_Date(ultimaActivity.getStartTime());
                         req.setWorked_End_Date(ultimaActivity.getEndTime());
                     } else {
-                        // fallback se non ci sono activity → ora corrente
                         req.setWorked_Date(LocalDateTime.now());
                         req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
-                        logger.debug("⚙️ Nessuna activity trovata per contatto {}, uso timestamp corrente", id);
                     }
 
                     modificati.add(req);
                     cacheContatti.put(id.longValue(), nuovo);
-
-                    logger.info("🔄 Contatto {} modificato → LeadRequest creato", id);
+                    logger.info("🔄 Contatto {} modificato (ResultCode: {})", id, resultCode);
                 }
             }
 
