@@ -134,26 +134,31 @@ public class ActivityService {
             int start = 0;
             boolean continua = true;
 
-            // 1️⃣ Recupero tutte le attività modificate
             while (continua) {
-                Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2); // 2 = Deal
+                Map<String, Object> filter = Map.of("OWNER_TYPE_ID", "2"); // String, non int
                 List<ActivityDTO> activities = getActivityList(filter, null, start);
 
-                if (activities.isEmpty()) break;
+                if (activities == null || activities.isEmpty()) break;
 
                 for (ActivityDTO nuova : activities) {
+                    if (nuova.getId() == null || nuova.getDateModify() == null) continue;
+
                     ActivityDTO vecchia = dealService.cacheAttivita.get(nuova.getId());
-                    boolean modificata = vecchia == null || !Objects.equals(vecchia.getDateModify(), nuova.getDateModify());
+                    boolean modificata = vecchia == null ||
+                            !Objects.equals(vecchia.getDateModify(), nuova.getDateModify());
 
                     if (modificata) {
                         dealService.cacheAttivita.put(nuova.getId(), nuova);
+
                         if (nuova.getOwnerId() != null) {
-                            dealAttivitaMap.computeIfAbsent(nuova.getOwnerId(), k -> new ArrayList<>()).add(nuova);
+                            dealAttivitaMap
+                                    .computeIfAbsent(nuova.getOwnerId(), k -> new ArrayList<>())
+                                    .add(nuova);
+                            logger.debug("🟢 Attività {} aggiornata per deal {}", nuova.getId(), nuova.getOwnerId());
                         }
                     }
                 }
 
-                // Pagination Bitrix24
                 if (activities.size() < 50) {
                     continua = false;
                 } else {
@@ -161,21 +166,23 @@ public class ActivityService {
                 }
             }
 
-            // 2️⃣ Recupero contatti per ogni deal modificato (una sola chiamata per deal)
+            // 🔹 Recupera i contatti collegati a ciascun deal modificato
             for (Long dealId : dealAttivitaMap.keySet()) {
                 List<Long> contatti = dealService.getContattiDaDeal(dealId);
                 if (!contatti.isEmpty()) {
                     contattiInAttesa.addAll(contatti);
-                    logger.info("🔁 Deal {} con {} contatti aggiunti alla lista in attesa", dealId, contatti.size());
+                    logger.info("🔁 Deal {} → {} contatti in attesa", dealId, contatti.size());
                 }
             }
 
         } catch (Exception e) {
-            logger.error("Errore durante il recupero dei contatti da attività modificate", e);
+            logger.error("🔥 Errore durante il recupero dei contatti da attività modificate", e);
         }
 
+        logger.info("✅ Totale contatti in attesa trovati: {}", contattiInAttesa.size());
         return contattiInAttesa;
     }
+
 
     private <T> ResponseEntity<T> callBitrixApiWithRetry(String url, HttpEntity<?> entity, Class<T> responseType) {
     int maxRetries = 5;
@@ -280,6 +287,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
