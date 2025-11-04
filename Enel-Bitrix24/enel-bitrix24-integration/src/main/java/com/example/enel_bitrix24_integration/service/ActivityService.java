@@ -53,7 +53,7 @@ public class ActivityService {
             requestBody.put("start", start);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+            ResponseEntity<Map> response = callBitrixApiWithRetry(url, entity, Map.class);
 
             Map<String, Object> body = extractAndValidateBody(response);
             List<ActivityDTO> activities = new ArrayList<>();
@@ -280,6 +280,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
