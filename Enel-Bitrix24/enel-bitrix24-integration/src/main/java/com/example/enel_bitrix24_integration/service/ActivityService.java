@@ -23,13 +23,12 @@ public class ActivityService {
     private final RestTemplate restTemplate;
     private final String baseUrl;
     private final String  webHookUrl;
-    @Autowired
-    @Lazy
     private final DealService dealService;
     
 
     private static final Logger logger = LoggerFactory.getLogger(ActivityService.class);
 
+    @Autowired
     public ActivityService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, DealService dealService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
@@ -241,6 +240,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
