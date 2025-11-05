@@ -85,4 +85,332 @@ public class DealDTO {
      public Map<String, Object> getRawData() {
         return Map.of();
     }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getIdAnagrafica() {
+        return idAnagrafica;
+    }
+
+    public void setIdAnagrafica(String idAnagrafica) {
+        this.idAnagrafica = idAnagrafica;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getTypeId() {
+        return typeId;
+    }
+
+    public void setTypeId(String typeId) {
+        this.typeId = typeId;
+    }
+
+    public Integer getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Integer categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getStageId() {
+        return stageId;
+    }
+
+    public void setStageId(String stageId) {
+        this.stageId = stageId;
+    }
+
+    public String getStageSemanticId() {
+        return stageSemanticId;
+    }
+
+    public void setStageSemanticId(String stageSemanticId) {
+        this.stageSemanticId = stageSemanticId;
+    }
+
+    public String getIsNew() {
+        return isNew;
+    }
+
+    public void setIsNew(String isNew) {
+        this.isNew = isNew;
+    }
+
+    public String getIsRecurring() {
+        return isRecurring;
+    }
+
+    public void setIsRecurring(String isRecurring) {
+        this.isRecurring = isRecurring;
+    }
+
+    public String getIsReturnCustomer() {
+        return isReturnCustomer;
+    }
+
+    public void setIsReturnCustomer(String isReturnCustomer) {
+        this.isReturnCustomer = isReturnCustomer;
+    }
+
+    public String getIsRepeatedApproach() {
+        return isRepeatedApproach;
+    }
+
+    public void setIsRepeatedApproach(String isRepeatedApproach) {
+        this.isRepeatedApproach = isRepeatedApproach;
+    }
+
+    public Integer getProbability() {
+        return probability;
+    }
+
+    public void setProbability(Integer probability) {
+        this.probability = probability;
+    }
+
+    public String getCurrencyId() {
+        return currencyId;
+    }
+
+    public void setCurrencyId(String currencyId) {
+        this.currencyId = currencyId;
+    }
+
+    public Double getOpportunity() {
+        return opportunity;
+    }
+
+    public void setOpportunity(Double opportunity) {
+        this.opportunity = opportunity;
+    }
+
+    public String getIsManualOpportunity() {
+        return isManualOpportunity;
+    }
+
+    public void setIsManualOpportunity(String isManualOpportunity) {
+        this.isManualOpportunity = isManualOpportunity;
+    }
+
+    public Double getTaxValue() {
+        return taxValue;
+    }
+
+    public void setTaxValue(Double taxValue) {
+        this.taxValue = taxValue;
+    }
+
+    public Integer getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Integer companyId) {
+        this.companyId = companyId;
+    }
+
+    public Integer getContactId() {
+        return contactId;
+    }
+
+    public void setContactId(Integer contactId) {
+        this.contactId = contactId;
+    }
+
+    public List<Integer> getContactIds() {
+        return contactIds;
+    }
+
+    public void setContactIds(List<Integer> contactIds) {
+        this.contactIds = contactIds;
+    }
+
+    public Map<String, Integer> getParentIdSPAs() {
+        return parentIdSPAs;
+    }
+
+    public void setParentIdSPAs(Map<String, Integer> parentIdSPAs) {
+        this.parentIdSPAs = parentIdSPAs;
+    }
+
+    public LocalDate getBeginDate() {
+        return beginDate;
+    }
+
+    public void setBeginDate(LocalDate beginDate) {
+        this.beginDate = beginDate;
+    }
+
+    public LocalDate getCloseDate() {
+        return closeDate;
+    }
+
+    public void setCloseDate(LocalDate closeDate) {
+        this.closeDate = closeDate;
+    }
+
+    public String getClosed() {
+        return closed;
+    }
+
+    public void setClosed(String closed) {
+        this.closed = closed;
+    }
+
+    public String getOpened() {
+        return opened;
+    }
+
+    public void setOpened(String opened) {
+        this.opened = opened;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+
+    public Integer getAssignedById() {
+        return assignedById;
+    }
+
+    public void setAssignedById(Integer assignedById) {
+        this.assignedById = assignedById;
+    }
+
+    public String getSourceId() {
+        return sourceId;
+    }
+
+    public void setSourceId(String sourceId) {
+        this.sourceId = sourceId;
+    }
+
+    public String getSourceDescription() {
+        return sourceDescription;
+    }
+
+    public void setSourceDescription(String sourceDescription) {
+        this.sourceDescription = sourceDescription;
+    }
+
+    public String getUtmSource() {
+        return utmSource;
+    }
+
+    public void setUtmSource(String utmSource) {
+        this.utmSource = utmSource;
+    }
+
+    public String getUtmCampaign() {
+        return utmCampaign;
+    }
+
+    public void setUtmCampaign(String utmCampaign) {
+        this.utmCampaign = utmCampaign;
+    }
+
+    public String getUtmMedium() {
+        return utmMedium;
+    }
+
+    public void setUtmMedium(String utmMedium) {
+        this.utmMedium = utmMedium;
+    }
+
+    public String getUtmContent() {
+        return utmContent;
+    }
+
+    public void setUtmContent(String utmContent) {
+        this.utmContent = utmContent;
+    }
+
+    public String getUtmTerm() {
+        return utmTerm;
+    }
+
+    public void setUtmTerm(String utmTerm) {
+        this.utmTerm = utmTerm;
+    }
+
+    public String getTrace() {
+        return trace;
+    }
+
+    public void setTrace(String trace) {
+        this.trace = trace;
+    }
+
+    public String getAdditionalInfo() {
+        return additionalInfo;
+    }
+
+    public void setAdditionalInfo(String additionalInfo) {
+        this.additionalInfo = additionalInfo;
+    }
+
+    public Integer getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Integer locationId) {
+        this.locationId = locationId;
+    }
+
+    public String getOriginatorId() {
+        return originatorId;
+    }
+
+    public void setOriginatorId(String originatorId) {
+        this.originatorId = originatorId;
+    }
+
+    public String getOriginId() {
+        return originId;
+    }
+
+    public void setOriginId(String originId) {
+        this.originId = originId;
+    }
+
+    public String getParentIdSPA() {
+        return parentIdSPA;
+    }
+
+    public void setParentIdSPA(String parentIdSPA) {
+        this.parentIdSPA = parentIdSPA;
+    }
+
+    public String getUfCrmCustomField() {
+        return ufCrmCustomField;
+    }
+
+    public void setUfCrmCustomField(String ufCrmCustomField) {
+        this.ufCrmCustomField = ufCrmCustomField;
+    }
+
+    public Map<String, Object> getCustomFields() {
+        return customFields;
+    }
+
+    public void setCustomFields(Map<String, Object> customFields) {
+        this.customFields = customFields;
+    }
 }
