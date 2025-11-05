@@ -246,7 +246,7 @@ public class DealService {
 
     public List<Map<String, Object>> listaCustomFieldsDeal() {
         try {
-            String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json;";
+            String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json";
 
             Map<String, Object> requestBody = Map.of(
                     "filter", Collections.emptyMap(),
