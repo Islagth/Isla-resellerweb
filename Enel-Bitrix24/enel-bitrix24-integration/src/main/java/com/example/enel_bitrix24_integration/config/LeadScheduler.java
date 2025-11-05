@@ -49,15 +49,33 @@ public class LeadScheduler {
         logger.info("🔄 Inizializzazione cache contatti e attività...");
 
         try {
+            // Usa la versione aggiornata che recupera tutti i contatti modificati con paginazione
             List<LeadRequest> tuttiContatti = contactService.trovaContattiModificati();
             for (LeadRequest lead : tuttiContatti) {
                 contattiCache.put(lead.getContactId(), String.valueOf(lead.getResultCode()));
             }
+
+            // Usa filtro Integer per attività e ciclo paginato per recuperare tutte le attività
             Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2);
-            List<ActivityDTO> attivitaIniziali = activityService.getActivityList(filter, null, 0);
-            for (ActivityDTO attivita : attivitaIniziali) {
-                attivitaCache.put(attivita.getId(), attivita);
+            int start = 0;
+            boolean continua = true;
+
+            while (continua) {
+                ActivityService.ActivityListResult result = activityService.getActivityList(filter, null, start);
+                List<ActivityDTO> attivitaIniziali = result.getActivities();
+
+                for (ActivityDTO attivita : attivitaIniziali) {
+                    attivitaCache.put(attivita.getId(), attivita);
+                }
+
+                Integer next = result.getNextStart();
+                if (next == null || next == 0) {
+                    continua = false;
+                } else {
+                    start = next;
+                }
             }
+
         } catch (Exception e) {
             logger.error("❌ Errore durante l’inizializzazione delle cache", e);
         }
@@ -93,21 +111,21 @@ public class LeadScheduler {
         try {
             Set<Long> contattiAggiornati = new HashSet<>();
 
-            // 1️⃣ Contatti modificati (gestiti internamente dal ContactService)
+            // 1️⃣ Contatti modificati (versione paginata)
             List<LeadRequest> leadsModificati = contactService.trovaContattiModificati();
             if (leadsModificati.isEmpty()) {
                 logger.info("📭 Nessun contatto modificato rilevato.");
             } else {
                 for (LeadRequest lead : leadsModificati) {
                     contattiAggiornati.add(lead.getContactId());
-                    contattiInAttesa.add(lead); // già completo dal ContactService
+                    contattiInAttesa.add(lead);
                     logger.info("📇 Contatto {} aggiunto dai contatti modificati (ResultCode: {})",
                             lead.getContactId(), lead.getResultCode());
                     sleepSafe(300);
                 }
             }
 
-            // 2️⃣ Attività modificate → ottieni i contatti collegati
+            // 2️⃣ Attività modificate → gestite con filtro Integer e ciclo paginato
             Set<Long> contattiDaAttivita = activityService.trovaContattiInAttesaDaAttivitaModificate();
             if (!contattiDaAttivita.isEmpty()) {
                 contattiAggiornati.addAll(contattiDaAttivita);
@@ -116,7 +134,7 @@ public class LeadScheduler {
                     req.setContactId(contactId);
                     req.setWorkedCode("AUTO_FROM_SCHEDULER");
                     req.setCaller("AUTO_SCHEDULER");
-                    req.setResultCode(ResultCode.D102); // Default solo se non c'è altro
+                    req.setResultCode(ResultCode.D102); // Default se non diversamente specificato
                     req.setWorkedType("O");
                     req.setWorked_Date(LocalDateTime.now());
                     req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
@@ -137,6 +155,7 @@ public class LeadScheduler {
             logger.info("🏁 Controllo completato.");
         }
     }
+
 
 
 
