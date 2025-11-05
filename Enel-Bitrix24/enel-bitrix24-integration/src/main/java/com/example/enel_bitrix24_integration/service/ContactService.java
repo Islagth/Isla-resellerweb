@@ -320,24 +320,31 @@ public class ContactService {
 
   public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
+        List<Map<String, Object>> tuttiContatti = new ArrayList<>();
 
         try {
-            // 🔹 Recupera tutti i contatti attivi da Bitrix24
             Map<String, Object> filter = Map.of("ACTIVE", "Y");
-            Map<String, Object> result = listaContatti(
-                    filter, null,
-                    List.of("ID", "NAME", "PHONE", "DATE_MODIFY", "UF_CRM_RESULT_CODE"),
-                    0
-            );
+            List<String> select = List.of("ID", "NAME", "PHONE", "DATE_MODIFY", "UF_CRM_RESULT_CODE");
+            int start = 0;
 
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
-            if (lista == null || lista.isEmpty()) {
-                logger.info("Nessun contatto attivo trovato.");
-                return modificati;
+            while (true) {
+                Map<String, Object> result = listaContatti(filter, null, select, start);
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
+
+                if (lista == null || lista.isEmpty()) {
+                    break;
+                }
+                tuttiContatti.addAll(lista);
+
+                Object next = result.get("next");
+                if (next == null || Integer.parseInt(next.toString()) == 0) {
+                    break;
+                }
+                start = Integer.parseInt(next.toString());
             }
 
-            for (Map<String, Object> contattoMap : lista) {
+            for (Map<String, Object> contattoMap : tuttiContatti) {
                 Integer id;
                 try {
                     id = Integer.valueOf(String.valueOf(contattoMap.get("ID")));
@@ -352,7 +359,6 @@ public class ContactService {
                     continue;
                 }
 
-                // 🔹 Parsing della data di modifica
                 LocalDateTime dataModifica;
                 try {
                     dataModifica = OffsetDateTime.parse(dateModify).toLocalDateTime();
@@ -366,7 +372,6 @@ public class ContactService {
                     }
                 }
 
-                // 🔹 Recupera il codice risultato custom (UF_CRM_RESULT_CODE)
                 String resultCodeValue = (String) contattoMap.get("UF_CRM_RESULT_CODE");
                 if (resultCodeValue == null || resultCodeValue.isBlank()) {
                     resultCodeValue = "UNKNOWN";
@@ -374,13 +379,11 @@ public class ContactService {
 
                 ResultCode resultCode = ResultCode.fromString(resultCodeValue);
 
-                // 🔹 Crea ContactDTO aggiornato
                 ContactDTO nuovo = new ContactDTO();
                 nuovo.setNAME(name);
                 nuovo.setDATE_MODIFY(dataModifica);
                 nuovo.setRESULT_CODE(resultCode);
 
-                // 🔹 Recupera vecchio contatto dalla cache
                 ContactDTO vecchio = cacheContatti.get(id.longValue());
                 boolean modificato = vecchio == null ||
                         !Objects.equals(vecchio.getDATE_MODIFY(), nuovo.getDATE_MODIFY()) ||
@@ -416,7 +419,6 @@ public class ContactService {
         logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
         return modificati;
     }
-
 
 
     /**
