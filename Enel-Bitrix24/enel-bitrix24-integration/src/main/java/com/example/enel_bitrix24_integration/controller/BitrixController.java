@@ -76,7 +76,7 @@ public class BitrixController {
         Map<String, Object> filter = (Map<String, Object>) body.get("filter");
         Map<String, String> order = (Map<String, String>) body.get("order");
         Integer start = (Integer) body.getOrDefault("start", 0);
-        List<DealDTO> deals = dealService.getDealsList(select, filter, order, start);
+        List<DealDTO> deals = dealService.getDealsList(select, filter, order, start).getDeals();
         logger.info("Recuperati {} deals", deals.size());
         return ResponseEntity.ok(deals);
     }
