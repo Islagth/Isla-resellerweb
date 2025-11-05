@@ -232,7 +232,7 @@ public class DealService {
 
         try {
             Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2); // 2 = Deal in Bitrix24
-            List<ActivityDTO> activities = activityService.getActivityList(filter, null, 0);
+           List<ActivityDTO> activities = activityService.getActivityList(filter, null, 0).getActivities();
 
             for (ActivityDTO nuova : activities) {
                 ActivityDTO vecchia = cacheAttivita.get(nuova.getId());
