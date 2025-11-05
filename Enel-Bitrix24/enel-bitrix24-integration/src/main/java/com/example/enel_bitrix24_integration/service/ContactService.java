@@ -136,6 +136,50 @@ public class ContactService {
         return contact;
     }
 
+    private ContactDTO mapToContactDTO(Map<String, Object> item) {
+        ContactDTO dto = new ContactDTO();
+
+        dto.setNAME((String) item.get("NAME"));
+        dto.setLAST_NAME((String) item.get("LAST_NAME"));
+
+        // PHONE e EMAIL sono array di Map<String,Object>
+        if (item.get("PHONE") instanceof List<?> phoneList) {
+            for (Object o : phoneList) {
+                if (o instanceof Map<?, ?> map) {
+                    ContactDTO.MultiField mf = new ContactDTO.MultiField();
+                    mf.setVALUE((String) map.get("VALUE"));
+                    mf.setVALUE_TYPE((String) map.get("VALUE_TYPE"));
+                    if (dto.getPHONE() == null) dto.setPHONE(new ArrayList<>());
+                    dto.getPHONE().add(mf);
+                }
+            }
+        }
+
+        if (item.get("EMAIL") instanceof List<?> emailList) {
+            for (Object o : emailList) {
+                if (o instanceof Map<?, ?> map) {
+                    ContactDTO.MultiField mf = new ContactDTO.MultiField();
+                    mf.setVALUE((String) map.get("VALUE"));
+                    mf.setVALUE_TYPE((String) map.get("VALUE_TYPE"));
+                    if (dto.getEMAIL() == null) dto.setEMAIL(new ArrayList<>());
+                    dto.getEMAIL().add(mf);
+                }
+            }
+        }
+
+        dto.setDATE_MODIFY(item.get("DATE_MODIFY") != null ?
+                LocalDateTime.parse((String) item.get("DATE_MODIFY")) : null);
+
+        // Imposta campo telefono principale
+        if (dto.getPHONE() != null && !dto.getPHONE().isEmpty()) {
+            dto.setTelefono(dto.getPHONE().get(0).getVALUE());
+        }
+
+        return dto;
+    }
+
+
+
     // ----------------- LISTA CONTATTO -----------------
     public Map<String, Object> listaContatti(Map<String, Object> filter, Map<String, String> order, List<String> select, Integer start) throws Exception {
         logger.info("Richiesta lista contatti");
@@ -475,19 +519,6 @@ public class ContactService {
         }
     }
 
-
-  
-
-    /**
-     * Converte una stringa in Long in modo sicuro, restituendo null se non è numerica.
-     */
-    private Long parseLongSafe(String value) {
-        try {
-            return (value != null && !value.isBlank()) ? Long.valueOf(value.trim()) : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
 
     public String extractPrimaryPhone(ContactDTO contact) {
         if (contact == null || contact.getPHONE() == null || contact.getPHONE().isEmpty()) {
