@@ -469,7 +469,7 @@ public class ContactService {
         }
     }
 
-    private String extractPrimaryPhone(ContactDTO contact) {
+    public String extractPrimaryPhone(ContactDTO contact) {
         if (contact.getPHONE() == null || contact.getPHONE().isEmpty()) return null;
         return contact.getPHONE().get(0).getVALUE(); // prende il primo numero
     }
