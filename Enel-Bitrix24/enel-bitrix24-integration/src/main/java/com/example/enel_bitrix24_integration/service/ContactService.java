@@ -136,47 +136,53 @@ public class ContactService {
         return contact;
     }
 
-    private ContactDTO mapToContactDTO(Map<String, Object> item) {
-        ContactDTO dto = new ContactDTO();
+  private ContactDTO mapToContactDTO(Map<String, Object> item) {
+    ContactDTO dto = new ContactDTO();
 
-        dto.setNAME((String) item.get("NAME"));
-        dto.setLAST_NAME((String) item.get("LAST_NAME"));
+    dto.setNAME((String) item.get("NAME"));
+    dto.setLAST_NAME((String) item.get("LAST_NAME"));
 
-        // PHONE e EMAIL sono array di Map<String,Object>
-        if (item.get("PHONE") instanceof List<?> phoneList) {
-            for (Object o : phoneList) {
-                if (o instanceof Map<?, ?> map) {
-                    ContactDTO.MultiField mf = new ContactDTO.MultiField();
-                    mf.setVALUE((String) map.get("VALUE"));
-                    mf.setVALUE_TYPE((String) map.get("VALUE_TYPE"));
-                    if (dto.getPHONE() == null) dto.setPHONE(new ArrayList<>());
-                    dto.getPHONE().add(mf);
-                }
+    // PHONE
+    if (item.get("PHONE") instanceof List<?> phoneList) {
+        for (Object o : phoneList) {
+            if (o instanceof Map<?, ?> map) {
+                ContactDTO.MultiField mf = new ContactDTO.MultiField();
+                mf.setVALUE((String) map.get("VALUE"));
+                mf.setVALUE_TYPE((String) map.get("VALUE_TYPE"));
+                if (dto.getPHONE() == null) dto.setPHONE(new ArrayList<>());
+                dto.getPHONE().add(mf);
             }
         }
-
-        if (item.get("EMAIL") instanceof List<?> emailList) {
-            for (Object o : emailList) {
-                if (o instanceof Map<?, ?> map) {
-                    ContactDTO.MultiField mf = new ContactDTO.MultiField();
-                    mf.setVALUE((String) map.get("VALUE"));
-                    mf.setVALUE_TYPE((String) map.get("VALUE_TYPE"));
-                    if (dto.getEMAIL() == null) dto.setEMAIL(new ArrayList<>());
-                    dto.getEMAIL().add(mf);
-                }
-            }
-        }
-
-        dto.setDATE_MODIFY(item.get("DATE_MODIFY") != null ?
-                LocalDateTime.parse((String) item.get("DATE_MODIFY")) : null);
-
-        // Imposta campo telefono principale
-        if (dto.getPHONE() != null && !dto.getPHONE().isEmpty()) {
-            dto.setTelefono(dto.getPHONE().get(0).getVALUE());
-        }
-
-        return dto;
     }
+
+    // EMAIL
+    if (item.get("EMAIL") instanceof List<?> emailList) {
+        for (Object o : emailList) {
+            if (o instanceof Map<?, ?> map) {
+                ContactDTO.MultiField mf = new ContactDTO.MultiField();
+                mf.setVALUE((String) map.get("VALUE"));
+                mf.setVALUE_TYPE((String) map.get("VALUE_TYPE"));
+                if (dto.getEMAIL() == null) dto.setEMAIL(new ArrayList<>());
+                dto.getEMAIL().add(mf);
+            }
+        }
+    }
+
+    // DATE_MODIFY con offset
+    if (item.get("DATE_MODIFY") != null) {
+        String dateStr = (String) item.get("DATE_MODIFY");
+        OffsetDateTime odt = OffsetDateTime.parse(dateStr); // gestisce +03:00
+        dto.setDATE_MODIFY(odt.toLocalDateTime());          // se vuoi solo LocalDateTime
+    }
+
+    // Imposta campo telefono principale
+    if (dto.getPHONE() != null && !dto.getPHONE().isEmpty()) {
+        dto.setTelefono(dto.getPHONE().get(0).getVALUE());
+    }
+
+    return dto;
+}
+
 
 
 
