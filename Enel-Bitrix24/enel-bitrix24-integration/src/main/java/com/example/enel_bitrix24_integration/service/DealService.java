@@ -277,14 +277,14 @@ public class DealService {
     }
 
 
-    public String getResultCodeForDeal(Integer dealId) {
+   public String getResultCodeForDeal(Integer dealId) {
         try {
             // Recupera tutti i campi custom dei deal
             List<Map<String, Object>> userFields = listaCustomFieldsDeal();
 
             // Cerca il campo RESULT_CODE
             Optional<Map<String, Object>> campoResultCodeOpt = userFields.stream()
-                    .filter(f -> "RESULT_CODE".equals(f.get("FIELD_NAME")))
+                    .filter(f -> "UF_RESULT_CODE".equals(f.get("FIELD_NAME")))
                     .findFirst();
 
             if (campoResultCodeOpt.isEmpty()) {
@@ -323,102 +323,101 @@ public class DealService {
     }
 
     public List<LeadRequest> trovaContattiModificati() {
-    List<LeadRequest> modificati = new ArrayList<>();
-    List<DealDTO> tuttiDeal = new ArrayList<>();
+        List<LeadRequest> modificati = new ArrayList<>();
+        List<DealDTO> tuttiDeal = new ArrayList<>();
 
-    try {
-        // Filtro per deals modificati dopo l'ultima verifica
-        String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        Map<String, Object> filter = new HashMap<>();
-        filter.put(">DATE_MODIFY", filtroData);
+        try {
+            // Filtro per deals modificati dopo l'ultima verifica
+            String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            Map<String, Object> filter = new HashMap<>();
+            filter.put(">DATE_MODIFY", filtroData);
 
-        List<String> select = List.of("ID", "TITLE", "DATE_MODIFY");
-        int start = 0;
+            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY","UF_RESULT_CODE");
+            int start = 0;
 
-        // Recupero paginato dei deal
-        while (true) {
-            DealListResult result = getDealsList(select, filter, null, start);
-            List<DealDTO> dealsPage = result.getDeals();
-            if (dealsPage.isEmpty()) break;
+            // Recupero paginato dei deal
+            while (true) {
+                DealListResult result = getDealsList(select, filter, null, start);
+                List<DealDTO> dealsPage = result.getDeals();
+                if (dealsPage.isEmpty()) break;
 
-            tuttiDeal.addAll(dealsPage);
-            Integer next = result.getNextStart();
-            if (next == null || next == 0) break;
-            start = next;
+                tuttiDeal.addAll(dealsPage);
+                Integer next = result.getNextStart();
+                if (next == null || next == 0) break;
+                start = next;
 
-            sleepSafe(500);
-        }
-
-        // Elaborazione dei deal
-        for (DealDTO deal : tuttiDeal) {
-            Integer dealId = deal.getId();
-            if (dealId == null) {
-                logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
-                continue;
+                sleepSafe(500);
             }
 
-            String currentResultCode = getResultCodeForDeal(dealId);
-            String cachedResultCode = cacheResultCodeDeal.get(dealId);
-
-            boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
-
-            if (!modificato) continue;
-
-            // Recupero contatti collegati al deal
-            List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
-            if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
-                logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
-                continue;
-            }
-
-            for (Long contactId : contattiDelDeal) {
-                if (contactId == null) {
-                    logger.warn("⚠️ Ignorato contatto null per deal {}", dealId);
+            // Elaborazione dei deal
+            for (DealDTO deal : tuttiDeal) {
+                Integer dealId = deal.getId();
+                if (dealId == null) {
+                    logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
                     continue;
                 }
 
-                LeadRequest req = new LeadRequest();
-                req.setContactId(contactId);
-                req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
-                req.setCaller("AUTO_SCHEDULER");
+                String currentResultCode = getResultCodeForDeal(dealId);
+                String cachedResultCode = cacheResultCodeDeal.get(dealId);
 
-                // Recupero ContactDTO
-                ContactDTO contact = contactService.getContattoById(contactId.intValue());
+                boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
 
-                // Estrazione telefono principale
-                String phone = (contact != null && contact.getPHONE() != null && !contact.getPHONE().isEmpty())
-                               ? contact.getPHONE().get(0).getVALUE()
-                               : "UNKNOWN";
-                req.setWorkedCode(phone);
+                if (!modificato) continue;
 
-                // Recupero ultima activity
-                ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(contactId.intValue());
-                if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
-                    req.setWorked_Date(ultimaActivity.getStartTime());
-                    req.setWorked_End_Date(ultimaActivity.getEndTime());
-                } else {
-                    req.setWorked_Date(LocalDateTime.now());
-                    req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                // Recupero contatti collegati al deal
+                List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
+                if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
+                    logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
+                    continue;
                 }
 
-                modificati.add(req);
+                for (Long contactId : contattiDelDeal) {
+                    if (contactId == null) {
+                        logger.warn("⚠️ Ignorato contatto null per deal {}", dealId);
+                        continue;
+                    }
+
+                    LeadRequest req = new LeadRequest();
+                    req.setContactId(contactId);
+                    req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
+                    req.setCaller("AUTO_SCHEDULER");
+
+                    // Recupero ContactDTO
+                    ContactDTO contact = contactService.getContattoById(contactId.intValue());
+
+                    // Estrazione telefono principale
+                    String phone = (contact != null && contact.getPHONE() != null && !contact.getPHONE().isEmpty())
+                            ? contact.getPHONE().get(0).getVALUE()
+                            : "UNKNOWN";
+                    req.setWorkedCode(phone);
+
+                    // Recupero ultima activity
+                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(contactId.intValue());
+                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                        req.setWorked_Date(ultimaActivity.getStartTime());
+                        req.setWorked_End_Date(ultimaActivity.getEndTime());
+                    } else {
+                        req.setWorked_Date(LocalDateTime.now());
+                        req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                    }
+
+                    modificati.add(req);
+                }
+
+                // Aggiorna cache dei result code in modo sicuro
+                cacheResultCodeDeal.put(dealId, currentResultCode != null ? currentResultCode : "UNKNOWN");
             }
 
-            // Aggiorna cache dei result code in modo sicuro
-            cacheResultCodeDeal.put(dealId, currentResultCode != null ? currentResultCode : "UNKNOWN");
+            // Aggiorna timestamp ultima verifica
+            ultimaVerifica = LocalDateTime.now();
+
+        } catch (Exception e) {
+            logger.error("🔥 Errore recupero/modifica deal", e);
         }
 
-        // Aggiorna timestamp ultima verifica
-        ultimaVerifica = LocalDateTime.now();
-
-    } catch (Exception e) {
-        logger.error("🔥 Errore recupero/modifica deal", e);
+        logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
+        return modificati;
     }
-
-    logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
-    return modificati;
-}
-
 
     private Integer extractNextStartFromLastResponse() {
         return 0;
