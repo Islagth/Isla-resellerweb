@@ -140,7 +140,7 @@ public class LeadScheduler {
                     req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
                     contattiInAttesa.add(req);
                     logger.info("🟡 Contatto {} aggiunto da attività modificata", contactId);
-                    sleepSafe(300);
+                     sleepSafe(1500);
                 }
             }
 
