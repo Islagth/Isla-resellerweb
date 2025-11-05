@@ -61,11 +61,17 @@ public class BitrixController {
     }
 
     // Cerca Deal per id
-    @GetMapping("/api/enel-leads/get-deal/{id}")
-    public ResponseEntity<?> getDealById(@PathVariable Integer id) {
-        logger.info("Ricevuta richiesta getDealById per ID: {}", id);
-        DealDTO dealDTO = dealService.getDealById(id);
-        return ResponseEntity.ok(dealDTO);
+    @GetMapping("/api/enel-leads/get-contact/{id}")
+    public ResponseEntity<?> getContattoById(@PathVariable int id) {
+        logger.info("Ricevuta richiesta getContattoById per id: {}", id);
+        try {
+            Map<String, Object> contact = contactService.getContattoById(id).getUF();
+            logger.info("Recuperato contatto ID {}", id);
+            return ResponseEntity.ok(contact);
+        } catch (Exception e) {
+            logger.error("Errore recupero contatto ID " + id, e);
+            return buildErrorResponse("Errore recupero contatto", e);
+        }
     }
 
     // Ottieni tutta la lista dei Deal
