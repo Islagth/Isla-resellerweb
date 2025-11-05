@@ -1,8 +1,8 @@
 package com.example.enel_bitrix24_integration.service;
 
-import com.example.enel_bitrix24_integration.dto.ActivityDTO;
-import com.example.enel_bitrix24_integration.dto.DealDTO;
+import com.example.enel_bitrix24_integration.dto.*;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,17 +29,20 @@ public class DealService {
     private final String  webHookUrl;
     private final ObjectMapper objectMapper;
     private final ActivityService activityService;
+    private final ContactService contactService;
 
     private static final Logger logger = LoggerFactory.getLogger(DealService.class);
+    private LocalDateTime ultimaVerifica = LocalDateTime.now().minusHours(1);
+    private final ConcurrentHashMap<Integer, String> cacheResultCodeDeal = new ConcurrentHashMap<>();
 
-    
     @Autowired
-    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper, @Lazy ActivityService activityService) {
+    public DealService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, ObjectMapper objectMapper, @Lazy ActivityService activityService, @Lazy ContactService contactService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.webHookUrl = webHookUrl;
         this.objectMapper = objectMapper;
         this.activityService = activityService;
+        this.contactService = contactService;
     }
 
     // ----------------- CREAZIONE DEAL -----------------
@@ -140,10 +145,11 @@ public class DealService {
     }
 
     // ----------------- LISTA DEAL -----------------
-    public List<DealDTO> getDealsList(List<String> select, Map<String, Object> filter,
-                                      Map<String, String> order, int start) {
+     public DealListResult getDealsList(List<String> select, Map<String, Object> filter,
+                                       Map<String, String> order, int start) {
         logger.info("Richiesta lista deal con filter: {}, order: {}, start: {}", filter, order, start);
-        String url = baseUrl + "/rest/9/9yi2oktsybau3wkn/crm.deal.list.json";
+        String url = baseUrl + "rest/9/9yi2oktsybau3wkn/crm.deal.list.json";
+
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("select", select != null ? select : Collections.singletonList("*"));
         requestBody.put("filter", filter != null ? filter : Collections.emptyMap());
@@ -151,23 +157,35 @@ public class DealService {
         requestBody.put("start", start);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
-
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
 
         Map<String, Object> body = extractAndValidateBody(response);
 
         List<DealDTO> deals = new ArrayList<>();
+        Integer nextStart = null;
+
         if (body.containsKey("result")) {
             List<Map<String, Object>> results = (List<Map<String, Object>>) body.get("result");
             for (Map<String, Object> item : results) {
                 deals.add(mapToDealDTO(item));
             }
             logger.info("Recuperati {} deal", deals.size());
-            return deals;
+        } else {
+            logger.info("Nessun deal recuperato");
         }
-        logger.info("Nessun deal recuperato");
-        return deals;
+
+        if (body.containsKey("next")) {
+            Object nextVal = body.get("next");
+            if (nextVal != null) {
+                try {
+                    nextStart = Integer.parseInt(nextVal.toString());
+                } catch (NumberFormatException ignored) { }
+            }
+        }
+
+        return new DealListResult(deals, nextStart);
     }
+
 
     // ----------------- ELIMINAZIONE DEAL -----------------
     public boolean deleteDeal(Integer id) {
@@ -225,7 +243,163 @@ public class DealService {
         }
     }
 
+    public List<Map<String, Object>> listaCustomFieldsDeal() {
+        try {
+            String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json;";
 
+            Map<String, Object> requestBody = Map.of(
+                    "filter", Collections.emptyMap(),
+                    "order", Map.of("SORT", "ASC", "ID", "ASC")
+            );
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode result = root.path("result");
+
+                if (result.isArray()) {
+                    List<Map<String, Object>> fields = new ArrayList<>();
+                    for (JsonNode fieldNode : result) {
+                        fields.add(objectMapper.convertValue(fieldNode, Map.class));
+                    }
+                    logger.info("✅ Recuperati {} campi custom per i deal", fields.size());
+                    return fields;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("❌ Errore durante il recupero dei custom field dei deal: {}", e.getMessage(), e);
+        }
+
+        return Collections.emptyList();
+    }
+
+
+    public String getResultCodeForDeal(Integer dealId) {
+        try {
+            // Recupera tutti i campi custom dei deal
+            List<Map<String, Object>> userFields = listaCustomFieldsDeal();
+
+            // Cerca il campo RESULT_CODE
+            Optional<Map<String, Object>> campoResultCodeOpt = userFields.stream()
+                    .filter(f -> "RESULT_CODE".equals(f.get("FIELD_NAME")))
+                    .findFirst();
+
+            if (campoResultCodeOpt.isEmpty()) {
+                logger.warn("⚠️ Campo custom RESULT_CODE non trovato nei DEAL");
+                return null;
+            }
+
+            String fieldName = campoResultCodeOpt.get().get("FIELD_NAME").toString(); // es. "UF_CRM_123ABC"
+
+            // Recupera il deal specifico con i campi custom
+            Map<String, Object> filter = Map.of("ID", dealId);
+            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY", fieldName);
+
+            List<DealDTO> deals = getDealsList(select, filter, null, 0).getDeals();
+
+            if (deals.isEmpty()) {
+                logger.warn("⚠️ Nessun deal trovato con ID {}", dealId);
+                return null;
+            }
+
+            Map<String, Object> dealMap = deals.get(0).getRawData(); // Se hai `mapToDealDTO`, aggiungi rawData al DTO
+            Object codeValue = dealMap.get(fieldName);
+
+            if (codeValue != null) {
+                logger.info("📄 RESULT_CODE per deal {}: {}", dealId, codeValue);
+                return codeValue.toString();
+            } else {
+                logger.info("ℹ️ Nessun RESULT_CODE presente per deal {}", dealId);
+            }
+
+        } catch (Exception e) {
+            logger.error("❌ Errore durante il recupero di RESULT_CODE per deal {}: {}", dealId, e.getMessage(), e);
+        }
+
+        return null;
+    }
+
+    public List<LeadRequest> trovaContattiModificati() {
+        List<LeadRequest> modificati = new ArrayList<>();
+        List<DealDTO> tuttiDeal = new ArrayList<>();
+
+        try {
+            String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            Map<String, Object> filter = new HashMap<>();
+            filter.put(">DATE_MODIFY", filtroData); // deal modificati dopo ultima verifica
+
+            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY");
+            int start = 0;
+
+            while (true) {
+                DealListResult result = getDealsList(select, filter, null, start);
+                List<DealDTO> dealsPage = result.getDeals();
+                if (dealsPage.isEmpty()) break;
+
+                tuttiDeal.addAll(dealsPage);
+                Integer next = result.getNextStart();
+                if (next == null || next == 0) break;
+                start = next;
+
+                sleepSafe(500);
+            }
+
+            for (DealDTO deal : tuttiDeal) {
+                Integer dealId = deal.getId();
+                String currentResultCode = getResultCodeForDeal(dealId);
+                String cachedResultCode = cacheResultCodeDeal.get(dealId);
+
+                boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
+
+                if (modificato) {
+                    List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
+                    for (Long contactId : contattiDelDeal) {
+                        LeadRequest req = new LeadRequest();
+
+                        req.setContactId(contactId);
+                        req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
+                        req.setCaller("AUTO_SCHEDULER");
+
+                        // Recupero ContactDTO e estrazione telefono corretta
+                        ContactDTO contact = (ContactDTO) contactService.getContattoById(contactId.intValue());
+                        String phone = contact != null ? contactService.extractPrimaryPhone(contact) : null;
+                        req.setWorkedCode(phone != null ? phone : "UNKNOWN");
+
+                        ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(contactId.intValue());
+                        if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                            req.setWorked_Date(ultimaActivity.getStartTime());
+                            req.setWorked_End_Date(ultimaActivity.getEndTime());
+                        } else {
+                            req.setWorked_Date(LocalDateTime.now());
+                            req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                        }
+
+                        modificati.add(req);
+                    }
+                    cacheResultCodeDeal.put(dealId, currentResultCode);
+                }
+            }
+
+            ultimaVerifica = LocalDateTime.now();
+
+        } catch (Exception e) {
+            logger.error("🔥 Errore recupero/modifica deal", e);
+        }
+
+        logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
+        return modificati;
+    }
+
+    private Integer extractNextStartFromLastResponse() {
+        return 0;
+    }
+
+
+    private void sleepSafe(long millis) {
+        try { Thread.sleep(millis); } catch (InterruptedException ignored) {}
+    }
 
     public List<Long> trovaDealConAttivitaModificate() {
         List<Long> dealConAttivitaModificate = new ArrayList<>();
@@ -256,9 +430,7 @@ public class DealService {
         return dealConAttivitaModificate;
     }
 
-    private void sleepSafe(long millis) {
-        try { Thread.sleep(millis); } catch (InterruptedException ignored) {}
-    }
+
 
     public List<Long> getContattiDaDeal(Long dealId) {
         try {
@@ -298,7 +470,23 @@ public class DealService {
         }
     }
 
+    public class DealListResult {
+        private List<DealDTO> deals;
+        private Integer nextStart;
 
+        public DealListResult(List<DealDTO> deals, Integer nextStart) {
+            this.deals = deals;
+            this.nextStart = nextStart;
+        }
+
+        public List<DealDTO> getDeals() {
+            return deals;
+        }
+
+        public Integer getNextStart() {
+            return nextStart;
+        }
+    }
 
 
 
