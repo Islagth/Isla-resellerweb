@@ -3,7 +3,9 @@ package com.example.enel_bitrix24_integration.service;
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
 import com.example.enel_bitrix24_integration.dto.LeadResponse;
 import com.example.enel_bitrix24_integration.security.TokenService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,9 +54,19 @@ public class BitrixService {
      * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
      */
     public LeadResponse invioLavorato(LeadRequest request) {
-        String url = baseUrl + "//partner-api/v5/worked";
+        String url = baseUrl + "/partner-api/v5/worked";
         HttpHeaders headers = getBearerAuthHeaders();
         HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
+
+        // Log del JSON inviato
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new JavaTimeModule()); // gestisce LocalDateTime
+            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            logger.info("📤 JSON inviato a Enel:\n{}", json);
+        } catch (JsonProcessingException e) {
+            logger.error("❌ Errore serializzazione JSON del request: {}", e.getMessage());
+        }
 
         int maxRetry = 3;
         for (int attempt = 1; attempt <= maxRetry; attempt++) {
@@ -87,4 +99,5 @@ public class BitrixService {
         fallback.setMessage("Errore imprevisto dopo tentativi multipli");
         return fallback;
     }
+
 }
