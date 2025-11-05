@@ -113,22 +113,25 @@
 
 	<build>
     <plugins>
+        <!-- Compiler plugin aggiornato per JDK 21 -->
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.8.1</version>
+            <version>3.11.0</version> <!-- versione compatibile con JDK 21 -->
             <configuration>
-                <source>${java.version}</source>
-                <target>${java.version}</target>
+                <source>21</source>
+                <target>21</target>
                 <annotationProcessorPaths>
                     <path>
                         <groupId>org.projectlombok</groupId>
                         <artifactId>lombok</artifactId>
-                        <version>1.18.24</version>
+                        <version>1.18.30</version> <!-- versione più recente di Lombok -->
                     </path>
                 </annotationProcessorPaths>
             </configuration>
         </plugin>
+
+        <!-- Spring Boot plugin rimane invariato -->
         <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
@@ -136,6 +139,7 @@
         </plugin>
     </plugins>
 </build>
+
 
 
 </project>
