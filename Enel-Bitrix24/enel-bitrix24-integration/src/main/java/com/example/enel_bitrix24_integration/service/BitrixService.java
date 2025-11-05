@@ -52,7 +52,7 @@ public class BitrixService {
      * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
      */
     public LeadResponse invioLavorato(LeadRequest request) {
-        String url = baseUrl + "/partner-api/v5/workedcontact";
+        String url = baseUrl + "//partner-api/v5/worked";
         HttpHeaders headers = getBearerAuthHeaders();
         HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
 
