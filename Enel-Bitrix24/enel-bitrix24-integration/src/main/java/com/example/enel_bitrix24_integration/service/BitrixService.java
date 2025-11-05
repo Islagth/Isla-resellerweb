@@ -55,27 +55,37 @@ public class BitrixService {
      */
     public LeadResponse invioLavorato(LeadRequest request) {
         String url = baseUrl + "/partner-api/v5/worked";
-        HttpHeaders headers = getBearerAuthHeaders();
-        HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
 
-        // Log del JSON inviato
+        HttpHeaders headers = getBearerAuthHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON); // ✅ aggiungi questo
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON)); // ✅ opzionale ma consigliato
+
+        // Log header e JSON inviato
         try {
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new JavaTimeModule()); // gestisce LocalDateTime
             String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            logger.info("📤 JSON inviato a Enel:\n{}", json);
+            logger.info("📤 Invio a Enel [{}]", url);
+            logger.info("🧾 Header HTTP: {}", headers);
+            logger.info("📦 Body JSON inviato:\n{}", json);
         } catch (JsonProcessingException e) {
             logger.error("❌ Errore serializzazione JSON del request: {}", e.getMessage());
         }
+
+        HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
 
         int maxRetry = 3;
         for (int attempt = 1; attempt <= maxRetry; attempt++) {
             try {
                 logger.info("📨 Invio contatto lavorato (tentativo {}): {}", attempt, request);
                 ResponseEntity<LeadResponse> response = restTemplate.postForEntity(url, entity, LeadResponse.class);
+
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                     logger.info("✅ Invio contatto riuscito al tentativo {}", attempt);
                     return response.getBody();
+                } else {
+                    logger.warn("⚠️ Risposta non valida da Enel ({}): {}",
+                            response.getStatusCode(), response.getBody());
                 }
             } catch (Exception e) {
                 logger.error("❌ Errore al tentativo {}: {}", attempt, e.getMessage());
