@@ -89,9 +89,7 @@ public class ContactDTO {
         }
     }
 
-    public String getVALUE() {
-            return "";
-        }
+ 
 }
 
 
