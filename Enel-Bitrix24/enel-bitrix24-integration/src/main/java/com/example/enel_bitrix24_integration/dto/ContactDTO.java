@@ -88,6 +88,10 @@ public class ContactDTO {
             this.VALUE_TYPE = VALUE_TYPE;
         }
     }
+
+    public String getVALUE() {
+            return "";
+        }
 }
 
 
