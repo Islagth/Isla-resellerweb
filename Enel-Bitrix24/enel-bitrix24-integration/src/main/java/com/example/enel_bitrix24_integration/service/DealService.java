@@ -19,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+
 @Service
 public class DealService {
 
@@ -363,8 +364,12 @@ public class DealService {
                         req.setCaller("AUTO_SCHEDULER");
 
                         // Recupero ContactDTO e estrazione telefono corretta
-                        ContactDTO contact = (ContactDTO) contactService.getContattoById(contactId.intValue());
-                        String phone = contact != null ? contactService.extractPrimaryPhone(contact) : null;
+                        ContactDTO contact = contactService.getContattoById(contactId.intValue());
+                        String phone = null;
+                        if (contact != null && contact.getPHONE() != null && !contact.getPHONE().isEmpty()) {
+                            ContactDTO.MultiField primaryPhone = contact.getPHONE().get(0);
+                            phone = primaryPhone != null ? primaryPhone.getValue() : null;
+                        }
                         req.setWorkedCode(phone != null ? phone : "UNKNOWN");
 
                         ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(contactId.intValue());
