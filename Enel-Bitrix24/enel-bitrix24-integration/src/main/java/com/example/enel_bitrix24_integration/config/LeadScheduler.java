@@ -30,7 +30,7 @@ public class LeadScheduler {
     private final DealService dealService;
     private final ActivityService activityService;
 
-    private final Map<Long, String> contattiCache = new HashMap<>();
+    private final Map<Long, String> dealCache = new HashMap<>();
     private final Map<Long, ActivityDTO> attivitaCache = new HashMap<>();
 
     // Lista thread-safe in memoria
@@ -50,9 +50,9 @@ public class LeadScheduler {
 
         try {
             // Usa la versione aggiornata che recupera tutti i contatti modificati con paginazione
-            List<LeadRequest> tuttiContatti = contactService.trovaContattiModificati();
+            List<LeadRequest> tuttiContatti = dealService.trovaContattiModificati();
             for (LeadRequest lead : tuttiContatti) {
-                contattiCache.put(lead.getContactId(), String.valueOf(lead.getResultCode()));
+                dealCache.put(lead.getContactId(), String.valueOf(lead.getResultCode()));
             }
 
             // Usa filtro Integer per attività e ciclo paginato per recuperare tutte le attività
@@ -80,7 +80,7 @@ public class LeadScheduler {
             logger.error("❌ Errore durante l’inizializzazione delle cache", e);
         }
 
-        logger.info("✅ Cache inizializzata con {} contatti e {} attività", contattiCache.size(), attivitaCache.size());
+        logger.info("✅ Cache inizializzata con {} deal e {} attività", dealCache.size(), attivitaCache.size());
     }
 
 
@@ -112,7 +112,7 @@ public class LeadScheduler {
             Set<Long> contattiAggiornati = new HashSet<>();
 
             // 1️⃣ Contatti modificati (versione paginata)
-            List<LeadRequest> leadsModificati = contactService.trovaContattiModificati();
+            List<LeadRequest> leadsModificati = dealService.trovaContattiModificati();
             if (leadsModificati.isEmpty()) {
                 logger.info("📭 Nessun contatto modificato rilevato.");
             } else {
@@ -140,7 +140,7 @@ public class LeadScheduler {
                     req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
                     contattiInAttesa.add(req);
                     logger.info("🟡 Contatto {} aggiunto da attività modificata", contactId);
-                     sleepSafe(1500);
+                    sleepSafe(1500);
                 }
             }
 
@@ -184,5 +184,3 @@ public class LeadScheduler {
         logger.info("🧹 Lista contatti svuotata dopo l’invio orario.");
     }
 }
-
-
