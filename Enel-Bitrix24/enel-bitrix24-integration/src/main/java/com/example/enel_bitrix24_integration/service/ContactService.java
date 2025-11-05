@@ -17,12 +17,9 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -118,16 +115,25 @@ public class ContactService {
     }
 
     // ----------------- GET CONTATTO PER ID -----------------
-    public Map<String, Object> getContattoById(int contactId) throws Exception {
+   public ContactDTO getContattoById(int contactId) throws Exception {
         logger.info("Recupero contatto per ID: {}", contactId);
-        String url = baseUrl + "/rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
+        String url = baseUrl + "rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
 
         Map<String, Object> result = postForResultMap(url, payload, "recupero contatto");
-        logger.info("Recupero contatto ID {} completato", contactId);
-        return result;
+
+        if (result == null || !result.containsKey("result")) {
+            logger.warn("⚠️ Nessun contatto trovato per ID {}", contactId);
+            return null;
+        }
+
+        Map<String, Object> data = (Map<String, Object>) result.get("result");
+        ContactDTO contact = mapToContactDTO(data);
+
+        logger.info("✅ Recupero contatto ID {} completato", contactId);
+        return contact;
     }
 
     // ----------------- LISTA CONTATTO -----------------
@@ -470,9 +476,70 @@ public class ContactService {
     }
 
     public String extractPrimaryPhone(ContactDTO contact) {
-        if (contact.getPHONE() == null || contact.getPHONE().isEmpty()) return null;
-        return contact.getPHONE().get(0).getVALUE(); // prende il primo numero
+        if (contact == null || contact.getPHONE() == null || contact.getPHONE().isEmpty()) {
+            return null;
+        }
+        ContactDTO.MultiField primary = contact.getPHONE().get(0);
+        return primary != null ? primary.getValue() : null;
     }
+
+    @SuppressWarnings("unchecked")
+    private ContactDTO mapToContactDTO(Map<String, Object> item) {
+        ContactDTO dto = new ContactDTO();
+
+        // Campi base
+        dto.setNAME((String) item.get("NAME"));
+        dto.setLAST_NAME((String) item.get("LAST_NAME"));
+
+        // Conversione DATE_MODIFY in LocalDateTime
+        Object dateModifyObj = item.get("DATE_MODIFY");
+        if (dateModifyObj != null) {
+            try {
+                String dateString = dateModifyObj.toString();
+                LocalDateTime dateTime;
+                try {
+                    dateTime = OffsetDateTime.parse(dateString).toLocalDateTime();
+                } catch (Exception e) {
+                    // fallback per formato "yyyy-MM-dd HH:mm:ss"
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    dateTime = LocalDateTime.parse(dateString, formatter);
+                }
+                dto.setDATE_MODIFY(dateTime);
+            } catch (Exception ex) {
+                logger.warn("⚠️ Errore parsing DATE_MODIFY per contatto {}: {}", item.get("ID"), ex.getMessage());
+            }
+        }
+
+        // --- PHONE
+        List<Map<String, Object>> phoneList = (List<Map<String, Object>>) item.get("PHONE");
+        if (phoneList != null) {
+            List<ContactDTO.MultiField> phones = new ArrayList<>();
+            for (Map<String, Object> phoneMap : phoneList) {
+                ContactDTO.MultiField mf = new ContactDTO.MultiField();
+                mf.setVALUE((String) phoneMap.get("VALUE"));
+                mf.setVALUE_TYPE((String) phoneMap.get("VALUE_TYPE"));
+                phones.add(mf);
+            }
+            dto.setPHONE(phones);
+        }
+
+        // --- EMAIL
+        List<Map<String, Object>> emailList = (List<Map<String, Object>>) item.get("EMAIL");
+        if (emailList != null) {
+            List<ContactDTO.MultiField> emails = new ArrayList<>();
+            for (Map<String, Object> emailMap : emailList) {
+                ContactDTO.MultiField mf = new ContactDTO.MultiField();
+                mf.setVALUE((String) emailMap.get("VALUE"));
+                mf.setVALUE_TYPE((String) emailMap.get("VALUE_TYPE"));
+                emails.add(mf);
+            }
+            dto.setEMAIL(emails);
+        }
+
+        return dto;
+    }
+
+
 
 
 }
