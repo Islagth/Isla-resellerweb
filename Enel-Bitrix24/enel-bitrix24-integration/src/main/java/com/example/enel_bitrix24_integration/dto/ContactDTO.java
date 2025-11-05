@@ -76,7 +76,7 @@ public class ContactDTO {
     }
 
     // --- Inner class per multifield ---
-    @Data
+     @Data
     public static class MultiField {
         private String VALUE;
         private String VALUE_TYPE;
@@ -87,7 +87,7 @@ public class ContactDTO {
             this.VALUE = VALUE;
             this.VALUE_TYPE = VALUE_TYPE;
         }
-    
+    }
 
     public String getHONORIFIC() {
         return HONORIFIC;
