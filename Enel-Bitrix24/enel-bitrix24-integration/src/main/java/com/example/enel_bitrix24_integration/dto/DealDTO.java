@@ -81,4 +81,8 @@ public class DealDTO {
         this.id = id;
         this.title = title;
     }
+
+     public Map<String, Object> getRawData() {
+        return Map.of();
+    }
 }
