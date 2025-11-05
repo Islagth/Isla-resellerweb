@@ -476,38 +476,7 @@ public class ContactService {
     }
 
 
-   private ContactDTO mapToContactDTO(Map<String, Object> item) {
-        ContactDTO dto = new ContactDTO();
-
-        // Campi base
-        dto.setNAME((String) item.get("NAME"));
-        dto.setLAST_NAME((String) item.get("LAST_NAME"));
-        dto.setSECOND_NAME((String) item.get("SECOND_NAME"));
-        dto.setCOMMENTS((String) item.get("COMMENTS"));
-        dto.setSOURCE_ID((String) item.get("SOURCE_ID"));
-        dto.setTYPE_ID((String) item.get("TYPE_ID"));
-
-        // Conversione date (Bitrix restituisce stringhe tipo "2025-11-05T10:12:33+03:00")
-        dto.setDATE_CREATE(parseDateTime(item.get("DATE_CREATE")));
-        dto.setDATE_MODIFY(parseDateTime(item.get("DATE_MODIFY")));
-
-        // Gestione multifield PHONE / EMAIL
-        if (item.containsKey("PHONE")) {
-            dto.setPHONE(parseMultiFieldList(item.get("PHONE")));
-        }
-        if (item.containsKey("EMAIL")) {
-            dto.setEMAIL(parseMultiFieldList(item.get("EMAIL")));
-        }
-
-        // Estrazione telefono principale per comodità
-        if (dto.getPHONE() != null && !dto.getPHONE().isEmpty()) {
-            dto.setTelefono(dto.getPHONE().get(0).getVALUE());
-        }
-
-        return dto;
-    }
-
-
+  
 
     /**
      * Converte una stringa in Long in modo sicuro, restituendo null se non è numerica.
