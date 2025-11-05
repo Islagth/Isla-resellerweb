@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
@@ -39,6 +40,7 @@ public class ContactService {
 
     // Cache in memoria dell'ultimo stato noto (in produzione -> Redis o DB)
     private final Map<Long, ContactDTO> cacheContatti = new ConcurrentHashMap<>();
+    private LocalDateTime ultimaVerifica = LocalDateTime.now().minusHours(1);
 
     @Autowired
     public ContactService(RestTemplate restTemplate, @Value("${bitrix24.api.base-url}") String baseUrl, @Value("https://b24-vayzx4.bitrix24.it/rest/9/txk5orlo651kxu97") String webHookUrl, LottoService lottoService, ObjectMapper objectMapper, ActivityService activityService) {
@@ -318,12 +320,18 @@ public class ContactService {
     }
 
 
-  public List<LeadRequest> trovaContattiModificati() {
+ 
+    public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
         List<Map<String, Object>> tuttiContatti = new ArrayList<>();
 
         try {
-            Map<String, Object> filter = Map.of("ACTIVE", "Y");
+            // Filtro: solo contatti attivi modificati dopo ultimaVerifica
+            String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            Map<String, Object> filter = new HashMap<>();
+            filter.put("ACTIVE", "Y");
+            filter.put(">DATE_MODIFY", filtroData); // ✅ solo contatti modificati
+
             List<String> select = List.of("ID", "NAME", "PHONE", "DATE_MODIFY", "UF_CRM_RESULT_CODE");
             int start = 0;
 
@@ -332,16 +340,15 @@ public class ContactService {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> lista = (List<Map<String, Object>>) result.get("result");
 
-                if (lista == null || lista.isEmpty()) {
-                    break;
-                }
+                if (lista == null || lista.isEmpty()) break;
                 tuttiContatti.addAll(lista);
 
                 Object next = result.get("next");
-                if (next == null || Integer.parseInt(next.toString()) == 0) {
-                    break;
-                }
+                if (next == null || Integer.parseInt(next.toString()) == 0) break;
                 start = Integer.parseInt(next.toString());
+
+                // Riduci la velocità per non saturare Bitrix
+                Thread.sleep(500);
             }
 
             for (Map<String, Object> contattoMap : tuttiContatti) {
@@ -355,9 +362,7 @@ public class ContactService {
 
                 String name = (String) contattoMap.get("NAME");
                 String dateModify = (String) contattoMap.get("DATE_MODIFY");
-                if (dateModify == null || dateModify.isBlank()) {
-                    continue;
-                }
+                if (dateModify == null || dateModify.isBlank()) continue;
 
                 LocalDateTime dataModifica;
                 try {
@@ -373,9 +378,7 @@ public class ContactService {
                 }
 
                 String resultCodeValue = (String) contattoMap.get("UF_CRM_RESULT_CODE");
-                if (resultCodeValue == null || resultCodeValue.isBlank()) {
-                    resultCodeValue = "UNKNOWN";
-                }
+                if (resultCodeValue == null || resultCodeValue.isBlank()) resultCodeValue = "UNKNOWN";
 
                 ResultCode resultCode = ResultCode.fromString(resultCodeValue);
 
@@ -412,12 +415,46 @@ public class ContactService {
                 }
             }
 
+            // ✅ aggiorna ultimaVerifica solo se la chiamata è andata bene
+            ultimaVerifica = LocalDateTime.now();
+
         } catch (Exception e) {
             logger.error("🔥 Errore durante il recupero o confronto contatti", e);
         }
 
         logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
         return modificati;
+    }
+
+
+
+    private Map<String, Object> postForResultMap(String url, Map<String, Object> params) {
+        int tentativi = 0;
+        int maxTentativi = 5;
+        long delay = 2000; // 2 secondi
+
+        while (tentativi < maxTentativi) {
+            try {
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, params, Map.class);
+                return response.getBody();
+            } catch (HttpServerErrorException e) {
+                if (e.getMessage().contains("QUERY_LIMIT_EXCEEDED")) {
+                    tentativi++;
+                    logger.warn("⚠️ Limite Bitrix24 raggiunto. Attendo {} ms prima di ritentare (tentativo {})", delay, tentativi);
+                    sleepSafe(delay);
+                    delay *= 2; // backoff esponenziale
+                } else {
+                    throw e;
+                }
+            }
+        }
+        throw new RuntimeException("Troppi tentativi falliti per " + url);
+    }
+
+    private void sleepSafe(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ignored) {}
     }
 
 
