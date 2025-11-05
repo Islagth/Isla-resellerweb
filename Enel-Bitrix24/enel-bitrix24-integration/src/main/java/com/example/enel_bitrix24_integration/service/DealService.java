@@ -368,7 +368,7 @@ public class DealService {
                         String phone = null;
                         if (contact != null && contact.getPHONE() != null && !contact.getPHONE().isEmpty()) {
                             ContactDTO.MultiField primaryPhone = contact.getPHONE().get(0);
-                            phone = primaryPhone != null ? primaryPhone.getValue() : null;
+                            phone = primaryPhone != null ? primaryPhone.getVALUE() : null;
                         }
                         req.setWorkedCode(phone != null ? phone : "UNKNOWN");
 
