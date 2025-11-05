@@ -25,6 +25,7 @@ public class ActivityService {
     private final RestTemplate restTemplate;
     private final String baseUrl;
     private final String  webHookUrl;
+
     private final DealService dealService;
     
 
@@ -39,7 +40,7 @@ public class ActivityService {
     }
 
 
-    public List<ActivityDTO> getActivityList(Map<String, Object> filter, List<String> select, int start) {
+    public ActivityListResult getActivityList(Map<String, Object> filter, List<String> select, int start) {
         try {
             String url = baseUrl + "/rest/9/27wvf2b46se5233m/crm.activity.list.json";
 
@@ -57,6 +58,7 @@ public class ActivityService {
 
             Map<String, Object> body = extractAndValidateBody(response);
             List<ActivityDTO> activities = new ArrayList<>();
+            Integer nextStart = null;
 
             if (body.containsKey("result")) {
                 @SuppressWarnings("unchecked")
@@ -73,7 +75,6 @@ public class ActivityService {
                     dto.setStatus((String) item.get("STATUS"));
                     dto.setResponsibleId(item.get("RESPONSIBLE_ID") != null ? Long.valueOf(item.get("RESPONSIBLE_ID").toString()) : null);
 
-                    // ✅ Conversione sicura delle date Bitrix (ISO 8601)
                     dto.setDateModify(parseDateSafely(Objects.toString(item.get("DATE_MODIFY"), "")));
                     dto.setStartTime(parseDateSafely(Objects.toString(item.get("START_TIME"), "")));
                     dto.setEndTime(parseDateSafely(Objects.toString(item.get("END_TIME"), "")));
@@ -82,12 +83,21 @@ public class ActivityService {
                 }
             }
 
-            logger.info("📋 Recuperate {} attività da Bitrix24", activities.size());
-            return activities;
+            if (body.containsKey("next")) {
+                Object nextVal = body.get("next");
+                if (nextVal != null) {
+                    try {
+                        nextStart = Integer.parseInt(nextVal.toString());
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+
+            logger.info("📋 Recuperate {} attività da Bitrix24, nextStart={}", activities.size(), nextStart);
+            return new ActivityListResult(activities, nextStart);
 
         } catch (Exception e) {
             logger.error("❌ Errore durante il recupero delle attività da Bitrix24", e);
-            return Collections.emptyList();
+            return new ActivityListResult(Collections.emptyList(), null);
         }
     }
 
@@ -103,7 +113,7 @@ public class ActivityService {
             );
 
             // ✅ Recupera la lista di attività dal metodo principale
-            List<ActivityDTO> activities = getActivityList(filter, select, 0);
+            List<ActivityDTO> activities = getActivityList(filter, select, 0).getActivities();
 
             if (activities == null || activities.isEmpty()) {
                 logger.info("ℹ️ Nessuna activity trovata per il contatto {}", contactId);
@@ -135,8 +145,10 @@ public class ActivityService {
             boolean continua = true;
 
             while (continua) {
-                Map<String, Object> filter = Map.of("OWNER_TYPE_ID", "2"); // String, non int
-                List<ActivityDTO> activities = getActivityList(filter, null, start);
+                Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2); // Assicurarsi che OWNER_TYPE_ID sia int 2
+                ActivityListResult result = getActivityList(filter, null, start); // Usa il nuovo metodo paginato
+
+                List<ActivityDTO> activities = result.getActivities();
 
                 if (activities == null || activities.isEmpty()) break;
 
@@ -159,10 +171,11 @@ public class ActivityService {
                     }
                 }
 
-                if (activities.size() < 50) {
+                Integer next = result.getNextStart();
+                if (next == null || next == 0) {
                     continua = false;
                 } else {
-                    start += activities.size();
+                    start = next;
                 }
             }
 
@@ -185,43 +198,42 @@ public class ActivityService {
 
 
     private <T> ResponseEntity<T> callBitrixApiWithRetry(String url, HttpEntity<?> entity, Class<T> responseType) {
-    int maxRetries = 5;
-    int attempt = 0;
-    long waitTime = 1500; // 1.5 secondi iniziali
+        int maxRetries = 5;
+        int attempt = 0;
+        long waitTime = 1500; // 1.5 secondi iniziali
 
-    while (attempt < maxRetries) {
-        try {
-            return restTemplate.exchange(url, HttpMethod.POST, entity, responseType);
-        } catch (HttpServerErrorException e) {
-            String body = e.getResponseBodyAsString();
-            if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE && body != null && body.contains("QUERY_LIMIT_EXCEEDED")) {
+        while (attempt < maxRetries) {
+            try {
+                return restTemplate.exchange(url, HttpMethod.POST, entity, responseType);
+            } catch (HttpServerErrorException e) {
+                String body = e.getResponseBodyAsString();
+                if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE && body != null && body.contains("QUERY_LIMIT_EXCEEDED")) {
+                    attempt++;
+                    logger.warn("⏳ Limite Bitrix24 raggiunto (tentativo #{}/{}). Attendo {}ms prima di riprovare...", attempt, maxRetries, waitTime);
+                    try {
+                        Thread.sleep(waitTime);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    waitTime *= 2; // backoff esponenziale
+                } else {
+                    throw e; // altri errori: interrompi
+                }
+            } catch (ResourceAccessException rae) {
+                // Gestisce timeout di rete
                 attempt++;
-                logger.warn("⏳ Limite Bitrix24 raggiunto (tentativo #{}/{}). Attendo {}ms prima di riprovare...", attempt, maxRetries, waitTime);
+                logger.warn("🌐 Timeout o rete non disponibile (tentativo #{}/{}). Ritento tra {}ms...", attempt, maxRetries, waitTime);
                 try {
                     Thread.sleep(waitTime);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
-                waitTime *= 2; // backoff esponenziale
-            } else {
-                throw e; // altri errori: interrompi
+                waitTime *= 2;
             }
-        } catch (ResourceAccessException rae) {
-            // Gestisce timeout di rete
-            attempt++;
-            logger.warn("🌐 Timeout o rete non disponibile (tentativo #{}/{}). Ritento tra {}ms...", attempt, maxRetries, waitTime);
-            try {
-                Thread.sleep(waitTime);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-            waitTime *= 2;
         }
+
+        throw new RuntimeException("❌ Limite Bitrix24 ancora superato dopo " + maxRetries + " tentativi");
     }
-
-    throw new RuntimeException("❌ Limite Bitrix24 ancora superato dopo " + maxRetries + " tentativi");
-}
-
 
     /**
      * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
@@ -283,6 +295,24 @@ public class ActivityService {
         }
 
         return body;
+    }
+
+    public static class ActivityListResult {
+        private List<ActivityDTO> activities;
+        private Integer nextStart;
+
+        public ActivityListResult(List<ActivityDTO> activities, Integer nextStart) {
+            this.activities = activities;
+            this.nextStart = nextStart;
+        }
+
+        public List<ActivityDTO> getActivities() {
+            return activities;
+        }
+
+        public Integer getNextStart() {
+            return nextStart;
+        }
     }
 
 
