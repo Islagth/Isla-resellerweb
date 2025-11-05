@@ -475,69 +475,95 @@ public class ContactService {
         }
     }
 
-    public String extractPrimaryPhone(ContactDTO contact) {
-        if (contact == null || contact.getPHONE() == null || contact.getPHONE().isEmpty()) {
-            return null;
-        }
-        ContactDTO.MultiField primary = contact.getPHONE().get(0);
-        return primary != null ? primary.getValue() : null;
-    }
 
-    @SuppressWarnings("unchecked")
-    private ContactDTO mapToContactDTO(Map<String, Object> item) {
+   private ContactDTO mapToContactDTO(Map<String, Object> item) {
         ContactDTO dto = new ContactDTO();
 
         // Campi base
         dto.setNAME((String) item.get("NAME"));
         dto.setLAST_NAME((String) item.get("LAST_NAME"));
+        dto.setSECOND_NAME((String) item.get("SECOND_NAME"));
+        dto.setCOMMENTS((String) item.get("COMMENTS"));
+        dto.setSOURCE_ID((String) item.get("SOURCE_ID"));
+        dto.setTYPE_ID((String) item.get("TYPE_ID"));
 
-        // Conversione DATE_MODIFY in LocalDateTime
-        Object dateModifyObj = item.get("DATE_MODIFY");
-        if (dateModifyObj != null) {
-            try {
-                String dateString = dateModifyObj.toString();
-                LocalDateTime dateTime;
-                try {
-                    dateTime = OffsetDateTime.parse(dateString).toLocalDateTime();
-                } catch (Exception e) {
-                    // fallback per formato "yyyy-MM-dd HH:mm:ss"
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                    dateTime = LocalDateTime.parse(dateString, formatter);
-                }
-                dto.setDATE_MODIFY(dateTime);
-            } catch (Exception ex) {
-                logger.warn("⚠️ Errore parsing DATE_MODIFY per contatto {}: {}", item.get("ID"), ex.getMessage());
-            }
+        // Conversione date (Bitrix restituisce stringhe tipo "2025-11-05T10:12:33+03:00")
+        dto.setDATE_CREATE(parseDateTime(item.get("DATE_CREATE")));
+        dto.setDATE_MODIFY(parseDateTime(item.get("DATE_MODIFY")));
+
+        // Gestione multifield PHONE / EMAIL
+        if (item.containsKey("PHONE")) {
+            dto.setPHONE(parseMultiFieldList(item.get("PHONE")));
+        }
+        if (item.containsKey("EMAIL")) {
+            dto.setEMAIL(parseMultiFieldList(item.get("EMAIL")));
         }
 
-        // --- PHONE
-        List<Map<String, Object>> phoneList = (List<Map<String, Object>>) item.get("PHONE");
-        if (phoneList != null) {
-            List<ContactDTO.MultiField> phones = new ArrayList<>();
-            for (Map<String, Object> phoneMap : phoneList) {
-                ContactDTO.MultiField mf = new ContactDTO.MultiField();
-                mf.setVALUE((String) phoneMap.get("VALUE"));
-                mf.setVALUE_TYPE((String) phoneMap.get("VALUE_TYPE"));
-                phones.add(mf);
-            }
-            dto.setPHONE(phones);
-        }
-
-        // --- EMAIL
-        List<Map<String, Object>> emailList = (List<Map<String, Object>>) item.get("EMAIL");
-        if (emailList != null) {
-            List<ContactDTO.MultiField> emails = new ArrayList<>();
-            for (Map<String, Object> emailMap : emailList) {
-                ContactDTO.MultiField mf = new ContactDTO.MultiField();
-                mf.setVALUE((String) emailMap.get("VALUE"));
-                mf.setVALUE_TYPE((String) emailMap.get("VALUE_TYPE"));
-                emails.add(mf);
-            }
-            dto.setEMAIL(emails);
+        // Estrazione telefono principale per comodità
+        if (dto.getPHONE() != null && !dto.getPHONE().isEmpty()) {
+            dto.setTelefono(dto.getPHONE().get(0).getVALUE());
         }
 
         return dto;
     }
+
+
+
+    /**
+     * Converte una stringa in Long in modo sicuro, restituendo null se non è numerica.
+     */
+    private Long parseLongSafe(String value) {
+        try {
+            return (value != null && !value.isBlank()) ? Long.valueOf(value.trim()) : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public String extractPrimaryPhone(ContactDTO contact) {
+        if (contact == null || contact.getPHONE() == null || contact.getPHONE().isEmpty()) {
+            return null;
+        }
+        ContactDTO.MultiField primary = contact.getPHONE().get(0);
+        return primary != null ? primary.getVALUE() : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<ContactDTO.MultiField> parseMultiFieldList(Object obj) {
+        if (obj == null) return null;
+        try {
+            List<Map<String, Object>> list = (List<Map<String, Object>>) obj;
+            return list.stream()
+                    .map(m -> new ContactDTO.MultiField(
+                            (String) m.get("VALUE"),
+                            (String) m.get("VALUE_TYPE")
+                    ))
+                    .toList();
+        } catch (ClassCastException e) {
+            logger.warn("Formato non previsto per MultiField: {}", obj);
+            return null;
+        }
+    }
+
+    private LocalDateTime parseDateTime(Object value) {
+        if (value == null) return null;
+        try {
+            String str = value.toString().replace(" ", "T");
+            return LocalDateTime.parse(str.substring(0, 19)); // taglia eventuale offset
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) return null;
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
 
 
 
