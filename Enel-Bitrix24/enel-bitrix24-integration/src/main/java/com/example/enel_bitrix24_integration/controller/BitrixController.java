@@ -124,10 +124,10 @@ public class BitrixController {
 
     // Cerca Contatto tramite Id
      @GetMapping("/api/enel-leads/get-contact/{id}")
-    public ResponseEntity<?> getContattoById(@PathVariable int id) {
+    public ResponseEntity<?> getContactoById(@PathVariable int id) {
         logger.info("Ricevuta richiesta getContattoById per id: {}", id);
         try {
-            Map<String, Object> contact = contactService.getContattoById(id).getUF();
+            Map<String, Object> contact =contactService.getContattoById(id).getUF();
             logger.info("Recuperato contatto ID {}", id);
             return ResponseEntity.ok(contact);
         } catch (Exception e) {
