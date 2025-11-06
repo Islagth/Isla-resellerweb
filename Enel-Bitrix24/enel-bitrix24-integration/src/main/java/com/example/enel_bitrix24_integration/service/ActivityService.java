@@ -92,7 +92,7 @@ public class ActivityService {
                 }
             }
 
-            logger.info("📋 Recuperate {} attività da Bitrix24, nextStart={}", activities.size(), nextStart);
+           
             return new ActivityListResult(activities, nextStart);
 
         } catch (Exception e) {
@@ -101,11 +101,11 @@ public class ActivityService {
         }
     }
 
-    public ActivityDTO getUltimaActivityPerContatto(Integer contactId) {
+   public ActivityDTO getUltimaActivityPerDeal(Integer dealId) {
         try {
             Map<String, Object> filter = new HashMap<>();
-            filter.put("OWNER_ID", contactId);
-            filter.put("OWNER_TYPE_ID", 3); // 3 = Contact in Bitrix CRM
+            filter.put("OWNER_ID", dealId);
+            filter.put("OWNER_TYPE_ID", 2); // 3 = Contact in Bitrix CRM
             filter.put("TYPE_ID", "CALL");
 
             List<String> select = List.of(
@@ -116,7 +116,7 @@ public class ActivityService {
             List<ActivityDTO> activities = getActivityList(filter, select, 0).getActivities();
 
             if (activities == null || activities.isEmpty()) {
-                logger.info("ℹ️ Nessuna activity trovata per il contatto {}", contactId);
+                logger.info("ℹ️ Nessuna activity trovata per il deal {}", dealId);
                 return null;
             }
 
@@ -127,16 +127,15 @@ public class ActivityService {
             ).reversed());
 
             ActivityDTO ultima = activities.get(0);
-            logger.info("📞 Ultima activity per contatto {} → ID: {}, modificata il {}", contactId, ultima.getId(), ultima.getDateModify());
+            logger.info("📞 Ultima activity per deal {} → ID: {}, modificata il {}", dealId, ultima.getId(), ultima.getDateModify());
             return ultima;
 
         } catch (Exception e) {
-            logger.warn("⚠️ Errore nel recupero dell’ultima activity per contatto {}: {}", contactId, e.getMessage());
+            logger.warn("⚠️ Errore nel recupero dell’ultima activity per deal {}: {}", dealId, e.getMessage());
             return null;
         }
     }
-
-    public Set<Long> trovaContattiInAttesaDaAttivitaModificate() {
+    /*public Set<Long> trovaContattiInAttesaDaAttivitaModificate() {
         Set<Long> contattiInAttesa = new HashSet<>();
         Map<Long, List<ActivityDTO>> dealAttivitaMap = new HashMap<>();
 
@@ -194,7 +193,7 @@ public class ActivityService {
 
         logger.info("✅ Totale contatti in attesa trovati: {}", contattiInAttesa.size());
         return contattiInAttesa;
-    }
+    }*/
 
 
     private <T> ResponseEntity<T> callBitrixApiWithRetry(String url, HttpEntity<?> entity, Class<T> responseType) {
@@ -317,6 +316,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
