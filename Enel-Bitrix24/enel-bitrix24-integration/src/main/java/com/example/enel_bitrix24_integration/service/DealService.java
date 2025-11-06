@@ -77,8 +77,7 @@ public class DealService {
         logger.info("Creazione deal per anagrafica {}", dto.getIdAnagrafica());
 
         Map<String, Object> fields = new HashMap<>();
-        fields.put("TITLE", "Lotto " + dto.getIdAnagrafica());
-        fields.put("UF_CRM_XXXX", dto.getIdAnagrafica()); // eventuale campo personalizzato
+        fields.put("UF_CRM_1762455213", dto.getIdAnagrafica());  // eventuale campo personalizzato
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("fields", fields);
@@ -400,11 +399,12 @@ public class DealService {
                     }
                     LeadRequest req = new LeadRequest();
                     // Imposta l'id anagrafica come contactId nel LeadRequest
-                    if (contact.getIdAnagrafica() != null) {
-                        req.setContactId(Long.valueOf(contact.getIdAnagrafica()));
+                     if (deal.getIdAnagrafica() != null) {
+                        req.setContactId(Long.valueOf(deal.getIdAnagrafica()));
                     } else {
-                        logger.warn("⚠️ Contatto {} senza id Anagrafica", contactId);
+                        logger.warn("⚠️ Deal {} senza id anagrafica, impostato come UNKNOWN", dealId);
                         req.setContactId(contactId);
+                    }
                     }
                     req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
                     req.setCaller("3932644963");
