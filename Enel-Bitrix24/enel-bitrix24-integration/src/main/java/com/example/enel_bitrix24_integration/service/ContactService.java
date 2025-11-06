@@ -449,7 +449,7 @@ public class ContactService {
                         !Objects.equals(vecchio.getRESULT_CODE(), nuovo.getRESULT_CODE());
 
                 if (modificato) {
-                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(id);
+                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerDeal(id);
 
                     LeadRequest req = new LeadRequest();
                     req.setContactId(id.longValue());
