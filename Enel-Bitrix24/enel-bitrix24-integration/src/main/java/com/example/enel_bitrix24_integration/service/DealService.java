@@ -386,8 +386,8 @@ public class DealService {
                     }
                     LeadRequest req = new LeadRequest();
                     // Imposta l'id anagrafica come contactId nel LeadRequest
-                    if (contact.getNAME() != null) {
-                        req.setContactId(Long.valueOf(contact.getNAME()));
+                    if (contact.getIdAnagrafica() != null) {
+                        req.setContactId(Long.valueOf(contact.getIdAnagrafica()));
                     } else {
                         logger.warn("⚠️ Contatto {} senza nome, impostato come UNKNOWN", contactId);
                         req.setContactId(-1L);
