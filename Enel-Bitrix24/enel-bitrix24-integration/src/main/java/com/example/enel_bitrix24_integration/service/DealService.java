@@ -266,12 +266,6 @@ public class DealService {
                         fields.add(objectMapper.convertValue(fieldNode, Map.class));
                     }
                     logger.info("✅ Recuperati {} campi custom per i deal", fields.size());
-                     for (Map<String, Object> field : fields) {
-                        logger.info("🔹 Nome interno: {}, Etichetta: {}, Tipo: {}",
-                                field.get("ID"),    
-                                field.get("FIELD_NAME"),
-                                field.get("USER_TYPE_ID"));
-                    }
                     return fields;
                 }
             }
