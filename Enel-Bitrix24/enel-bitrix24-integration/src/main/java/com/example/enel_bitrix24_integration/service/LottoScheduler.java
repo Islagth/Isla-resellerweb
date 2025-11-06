@@ -30,7 +30,7 @@ public class LottoScheduler {
         this.dealService = dealService;
     }
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 300000)
     public void processaTuttiILotti() {
         try {
             List<LottoDTO> lottiDisponibili = lottoService.verificaLottiDisponibili();
@@ -87,6 +87,7 @@ public class LottoScheduler {
 
 
 }
+
 
 
 
