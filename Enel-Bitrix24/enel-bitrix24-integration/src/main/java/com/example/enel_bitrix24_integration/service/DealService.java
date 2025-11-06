@@ -337,121 +337,105 @@ public class DealService {
     
 
     public List<LeadRequest> trovaContattiModificati() {
-        List<LeadRequest> modificati = new ArrayList<>();
-        List<DealDTO> tuttiDeal = new ArrayList<>();
+    List<LeadRequest> modificati = new ArrayList<>();
+    List<DealDTO> tuttiDeal = new ArrayList<>();
 
-        try {
-            // Filtro per deals modificati dopo l'ultima verifica
-            String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-            Map<String, Object> filter = new HashMap<>();
-            filter.put(">DATE_MODIFY", filtroData);
+    try {
+        String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        Map<String, Object> filter = new HashMap<>();
+        filter.put(">DATE_MODIFY", filtroData);
 
-            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY","UF_CRM_1761843804");
-            int start = 0;
+        List<String> select = List.of("ID", "TITLE", "DATE_MODIFY", "UF_CRM_1761843804");
+        int start = 0;
 
-            // Recupero paginato dei deal
-            while (true) {
-                DealListResult result = getDealsList(select, filter, null, start);
-                List<DealDTO> dealsPage = result.getDeals();
-                if (dealsPage.isEmpty()) break;
+        while (true) {
+            DealListResult result = getDealsList(select, filter, null, start);
+            List<DealDTO> dealsPage = result.getDeals();
+            if (dealsPage.isEmpty()) break;
 
-                tuttiDeal.addAll(dealsPage);
-                Integer next = result.getNextStart();
-                if (next == null || next == 0) break;
-                start = next;
-
-                sleepSafe(500);
-            }
-
-            // Elaborazione dei deal
-            for (DealDTO deal : tuttiDeal) {
-                Integer dealId = deal.getId();
-                if (dealId == null) {
-                    logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
-                    continue;
-                }
-
-                String currentResultCode = getResultCodeForDeal(dealId);
-                String cachedResultCode = cacheResultCodeDeal.get(dealId);
-
-                boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
-
-                if (!modificato) continue;
-
-                // Recupero contatti collegati al deal
-                List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
-                if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
-                    logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
-                    continue;
-                }
-
-                for (Long contactId : contattiDelDeal) {
-                    if (contactId == null) {
-                        logger.warn("⚠️ Ignorato contatto null per deal {}", dealId);
-                        continue;
-                    }
-
-                    // Recupero ContactDTO
-                    ContactDTO contact = contactService.getContattoById(contactId.intValue());
-                    if (contact == null) {
-                        logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
-                        continue;
-                    }
-                    LeadRequest req = new LeadRequest();
-                    // Imposta l'id anagrafica come contactId nel LeadRequest
-                     if (deal.getIdAnagrafica() != null) {
-                        req.setContactId(Long.valueOf(deal.getIdAnagrafica()));
-                    } else {
-                        logger.warn("⚠️ Deal {} senza id anagrafica, impostato come UNKNOWN", dealId);
-                        req.setContactId(contactId);
-                    }
-                    }
-                    req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
-                    req.setCaller("3932644963");
-
-
-                    // Estrazione telefono principale (workedCode)
-                    String phone = (contact != null && contact.getPHONE() != null && !contact.getPHONE().isEmpty())
-                            ? contact.getPHONE().get(0).getVALUE()
-                            : "+0000000000";
-                    req.setWorkedCode(phone);
-
-                    // Recupero ultima activity per impostare worked_Date e worked_End_Date
-                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerDeal(dealId);
-                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
-                        req.setWorked_Date(ultimaActivity.getStartTime());
-                        req.setWorked_End_Date(ultimaActivity.getEndTime());
-                    } else {
-                        LocalDateTime now = LocalDateTime.now();
-                        req.setWorked_Date(now);
-                        req.setWorked_End_Date(now.plusMinutes(2));
-                    }
-
-                    // Campi aggiuntivi dal JSON
-                    req.setWorkedType("O");    // Potrai impostare un valore reale se disponibile
-                    req.setCampaignId(65704L);    // Da popolare se associato a una campagna
-                    req.setChatHistory(null);   // Potresti impostarlo se hai cronologia chat disponibile
-
-                    modificati.add(req);
-
-                    logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
-                }
-
-
-                // Aggiorna cache dei result code in modo sicuro
-                cacheResultCodeDeal.put(dealId, currentResultCode != null ? currentResultCode : "UNKNOWN");
-            }
-
-            // Aggiorna timestamp ultima verifica
-            ultimaVerifica = LocalDateTime.now();
-
-        } catch (Exception e) {
-            logger.error("🔥 Errore recupero/modifica deal", e);
+            tuttiDeal.addAll(dealsPage);
+            Integer next = result.getNextStart();
+            if (next == null || next == 0) break;
+            start = next;
+            sleepSafe(500);
         }
 
-        logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
-        return modificati;
+        for (DealDTO deal : tuttiDeal) {
+            Integer dealId = deal.getId();
+            if (dealId == null) {
+                logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
+                continue;
+            }
+
+            String currentResultCode = getResultCodeForDeal(dealId);
+            String cachedResultCode = cacheResultCodeDeal.get(dealId);
+            boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
+
+            if (!modificato) continue;
+
+            List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
+            if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
+                logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
+                continue;
+            }
+
+            for (Long contactId : contattiDelDeal) {
+                if (contactId == null) {
+                    logger.warn("⚠️ Ignorato contatto null per deal {}", dealId);
+                    continue;
+                }
+
+                ContactDTO contact = contactService.getContattoById(contactId.intValue());
+                if (contact == null) {
+                    logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
+                    continue;
+                }
+
+                LeadRequest req = new LeadRequest();
+                if (deal.getIdAnagrafica() != null) {
+                    req.setContactId(Long.valueOf(deal.getIdAnagrafica()));
+                } else {
+                    logger.warn("⚠️ Deal {} senza id anagrafica, impostato come UNKNOWN", dealId);
+                    req.setContactId(contactId);
+                }
+
+                req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
+                req.setCaller("3932644963");
+
+                String phone = (contact.getPHONE() != null && !contact.getPHONE().isEmpty())
+                        ? contact.getPHONE().get(0).getVALUE()
+                        : "+0000000000";
+                req.setWorkedCode(phone);
+
+                ActivityDTO ultimaActivity = activityService.getUltimaActivityPerDeal(dealId);
+                if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                    req.setWorked_Date(ultimaActivity.getStartTime());
+                    req.setWorked_End_Date(ultimaActivity.getEndTime());
+                } else {
+                    LocalDateTime now = LocalDateTime.now();
+                    req.setWorked_Date(now);
+                    req.setWorked_End_Date(now.plusMinutes(2));
+                }
+
+                req.setWorkedType("O");
+                req.setCampaignId(65704L);
+                
+                modificati.add(req);
+                logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
+            }
+
+            cacheResultCodeDeal.put(dealId, currentResultCode != null ? currentResultCode : "UNKNOWN");
+        }
+
+        ultimaVerifica = LocalDateTime.now();
+
+    } catch (Exception e) {
+        logger.error("🔥 Errore recupero/modifica deal", e);
     }
+
+    logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
+    return modificati;
+}
 
     
     private Integer extractNextStartFromLastResponse() {
