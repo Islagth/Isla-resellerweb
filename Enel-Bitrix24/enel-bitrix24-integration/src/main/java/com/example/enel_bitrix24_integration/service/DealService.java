@@ -287,7 +287,7 @@ public class DealService {
             Optional<Map<String, Object>> campoResultCodeOpt = userFields.stream()
                     .filter(f -> "UF_CRM_1761843804".equals(f.get("FIELD_NAME")))
                     .findFirst();
-            
+
             if (campoResultCodeOpt.isEmpty()) {
                 logger.warn("⚠️ Campo custom RESULT_CODE non trovato nei DEAL");
                 return null;
@@ -297,7 +297,7 @@ public class DealService {
 
             // Recupera il deal specifico con i campi custom
             Map<String, Object> filter = Map.of("ID", dealId);
-            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY", fieldName);
+            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY", fieldName, "LIST");
 
             List<DealDTO> deals = getDealsList(select, filter, null, 0).getDeals();
 
@@ -306,22 +306,36 @@ public class DealService {
                 return null;
             }
 
-            Map<String, Object> dealMap = deals.get(0).getRawData(); // Se hai `mapToDealDTO`, aggiungi rawData al DTO
-            Object codeValue = dealMap.get(fieldName);
+            Map<String, Object> dealMap = deals.get(0).getRawData();
 
-            if (codeValue != null) {
-                logger.info("📄 RESULT_CODE per deal {}: {}", dealId, codeValue);
-                return codeValue.toString();
-            } else {
-                logger.info("ℹ️ Nessun RESULT_CODE presente per deal {}", dealId);
+            // Recupera la LIST
+            Object listObject = dealMap.get("LIST");
+
+            if (listObject instanceof List<?>) {
+                List<?> listItems = (List<?>) listObject;
+
+                for (Object item : listItems) {
+                    if (item instanceof Map<?, ?> mapItem) {
+                        Object value = mapItem.get("VALUE");
+
+                        if (value != null && !value.toString().isEmpty()) {
+                            logger.info("📋 VALUE trovato: {}", value);
+                            return value.toString(); // 🔹 Restituisce solo l’etichetta testuale
+                        }
+                    }
+                }
             }
 
+            logger.info("ℹ️ Nessun VALUE presente nel campo LIST per il deal {}", dealId);
+            return null;
+            
         } catch (Exception e) {
             logger.error("❌ Errore durante il recupero di RESULT_CODE per deal {}: {}", dealId, e.getMessage(), e);
         }
 
         return null;
     }
+    
 
     public List<LeadRequest> trovaContattiModificati() {
         List<LeadRequest> modificati = new ArrayList<>();
