@@ -246,7 +246,7 @@ public class DealService {
 
    public List<Map<String, Object>> listaCustomFieldsDeal() {
         try {
-            String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json;";
+            String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json";
 
             Map<String, Object> requestBody = Map.of(
                     "filter", Collections.emptyMap(),
@@ -266,6 +266,12 @@ public class DealService {
                         fields.add(objectMapper.convertValue(fieldNode, Map.class));
                     }
                     logger.info("✅ Recuperati {} campi custom per i deal", fields.size());
+                     for (Map<String, Object> field : fields) {
+                        logger.info("🔹 Nome interno: {}, Etichetta: {}, Tipo: {}",
+                                field.get("ID"),    
+                                field.get("FIELD_NAME"),
+                                field.get("USER_TYPE_ID"));
+                    }
                     return fields;
                 }
             }
