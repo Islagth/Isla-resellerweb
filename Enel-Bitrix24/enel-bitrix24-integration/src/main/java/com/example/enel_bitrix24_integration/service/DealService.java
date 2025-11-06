@@ -291,9 +291,9 @@ public class DealService {
 
             // Cerca il campo RESULT_CODE
             Optional<Map<String, Object>> campoResultCodeOpt = userFields.stream()
-                    .filter(f -> "UF_RESULT_CODE".equals(f.get("FIELD_NAME")))
+                    .filter(f -> "UF_CRM_1761843804".equals(f.get("FIELD_NAME")))
                     .findFirst();
-
+            
             if (campoResultCodeOpt.isEmpty()) {
                 logger.warn("⚠️ Campo custom RESULT_CODE non trovato nei DEAL");
                 return null;
@@ -384,32 +384,51 @@ public class DealService {
                         continue;
                     }
 
-                    LeadRequest req = new LeadRequest();
-                    req.setContactId(contactId);
-                    req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
-                    req.setCaller("AUTO_SCHEDULER");
-
                     // Recupero ContactDTO
                     ContactDTO contact = contactService.getContattoById(contactId.intValue());
+                    if (contact == null) {
+                        logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
+                        continue;
+                    }
+                    LeadRequest req = new LeadRequest();
+                    // Imposta l'id anagrafica come contactId nel LeadRequest
+                    if (contact.getIdAnagrafica() != null) {
+                        req.setContactId(Long.valueOf(contact.getIdAnagrafica()));
+                    } else {
+                        logger.warn("⚠️ Contatto {} senza id_anagrafica, impostato come UNKNOWN", contactId);
+                        req.setContactId(-1L);
+                    }
+                    req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
+                    req.setCaller("3932644963");
 
-                    // Estrazione telefono principale
+
+                    // Estrazione telefono principale (workedCode)
                     String phone = (contact != null && contact.getPHONE() != null && !contact.getPHONE().isEmpty())
                             ? contact.getPHONE().get(0).getVALUE()
-                            : "UNKNOWN";
+                            : "+0000000000";
                     req.setWorkedCode(phone);
 
-                    // Recupero ultima activity
-                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerContatto(contactId.intValue());
+                    // Recupero ultima activity per impostare worked_Date e worked_End_Date
+                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerDeal(dealId);
                     if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
                         req.setWorked_Date(ultimaActivity.getStartTime());
                         req.setWorked_End_Date(ultimaActivity.getEndTime());
                     } else {
-                        req.setWorked_Date(LocalDateTime.now());
-                        req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                        LocalDateTime now = LocalDateTime.now();
+                        req.setWorked_Date(now);
+                        req.setWorked_End_Date(now.plusMinutes(2));
                     }
 
+                    // Campi aggiuntivi dal JSON
+                    req.setWorkedType("O");    // Potrai impostare un valore reale se disponibile
+                    req.setCampaignId(65704L);    // Da popolare se associato a una campagna
+                    req.setChatHistory(null);   // Potresti impostarlo se hai cronologia chat disponibile
+
                     modificati.add(req);
+
+                    logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
                 }
+
 
                 // Aggiorna cache dei result code in modo sicuro
                 cacheResultCodeDeal.put(dealId, currentResultCode != null ? currentResultCode : "UNKNOWN");
@@ -426,6 +445,7 @@ public class DealService {
         return modificati;
     }
 
+    
     private Integer extractNextStartFromLastResponse() {
         return 0;
     }
