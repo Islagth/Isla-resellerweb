@@ -98,7 +98,7 @@ public class LeadScheduler {
         try { Thread.sleep(millis); } catch (InterruptedException ignored) {}
     }
 
-    @Scheduled(cron = "0 */30 * * * *")  // ogni 30 minuti
+    @Scheduled(fixedRate = 1800000) // ogni 30 minuti
     public synchronized void controllaModifiche() {
         if (inEsecuzione) {
             logger.warn("⏳ Scheduler già in esecuzione. Salto questo ciclo.");
