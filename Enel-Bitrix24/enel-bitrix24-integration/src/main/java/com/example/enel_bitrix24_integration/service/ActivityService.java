@@ -106,7 +106,7 @@ public class ActivityService {
             Map<String, Object> filter = new HashMap<>();
             filter.put("OWNER_ID", dealId);
             filter.put("OWNER_TYPE_ID", 2); // 3 = Contact in Bitrix CRM
-            filter.put("TYPE_ID", "CALL");
+            filter.put("TYPE_ID", 2);
 
             List<String> select = List.of(
                     "ID", "OWNER_ID", "TYPE_ID", "START_TIME", "END_TIME", "DATE_MODIFY", "SUBJECT", "DESCRIPTION"
@@ -316,6 +316,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
