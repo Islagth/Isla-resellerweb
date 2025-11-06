@@ -66,7 +66,6 @@ public class BitrixService {
             mapper.registerModule(new JavaTimeModule()); // gestisce LocalDateTime
             String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
             logger.info("📤 Invio a Enel [{}]", url);
-            logger.info("🧾 Header HTTP: {}", headers);
             logger.info("📦 Body JSON inviato:\n{}", json);
         } catch (JsonProcessingException e) {
             logger.error("❌ Errore serializzazione JSON del request: {}", e.getMessage());
