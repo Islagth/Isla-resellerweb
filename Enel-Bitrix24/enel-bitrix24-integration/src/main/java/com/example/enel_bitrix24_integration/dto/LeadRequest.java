@@ -16,7 +16,7 @@ public class LeadRequest {
     private String workedType;
     private Long campaignId;
     private Long contactId;
-    private String chatHistory;
+    
 
     public String getWorkedCode() {
         return workedCode;
@@ -80,14 +80,6 @@ public class LeadRequest {
 
     public void setContactId(Long contactId) {
         this.contactId = contactId;
-    }
-
-    public String getChatHistory() {
-        return chatHistory;
-    }
-
-    public void setChatHistory(String chatHistory) {
-        this.chatHistory = chatHistory;
     }
     
 }
