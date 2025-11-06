@@ -339,7 +339,7 @@ public class DealService {
             Map<String, Object> filter = new HashMap<>();
             filter.put(">DATE_MODIFY", filtroData);
 
-            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY","UF_RESULT_CODE");
+            List<String> select = List.of("ID", "TITLE", "DATE_MODIFY","UF_CRM_1761843804");
             int start = 0;
 
             // Recupero paginato dei deal
@@ -392,10 +392,10 @@ public class DealService {
                     }
                     LeadRequest req = new LeadRequest();
                     // Imposta l'id anagrafica come contactId nel LeadRequest
-                    if (contact.getIdAnagrafica() != null) {
-                        req.setContactId(Long.valueOf(contact.getIdAnagrafica()));
+                    if (contact.getNAME() != null) {
+                        req.setContactId(Long.valueOf(contact.getNAME()));
                     } else {
-                        logger.warn("⚠️ Contatto {} senza id_anagrafica, impostato come UNKNOWN", contactId);
+                        logger.warn("⚠️ Contatto {} senza nome, impostato come UNKNOWN", contactId);
                         req.setContactId(-1L);
                     }
                     req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
