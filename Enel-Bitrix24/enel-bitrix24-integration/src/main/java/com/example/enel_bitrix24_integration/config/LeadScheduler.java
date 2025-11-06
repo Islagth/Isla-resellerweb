@@ -125,7 +125,7 @@ public class LeadScheduler {
                 }
             }
 
-            // 2️⃣ Attività modificate → gestite con filtro Integer e ciclo paginato
+            /* 2️⃣ Attività modificate → gestite con filtro Integer e ciclo paginato
             Set<Long> contattiDaAttivita = activityService.trovaContattiInAttesaDaAttivitaModificate();
             if (!contattiDaAttivita.isEmpty()) {
                 contattiAggiornati.addAll(contattiDaAttivita);
@@ -142,7 +142,7 @@ public class LeadScheduler {
                     logger.info("🟡 Contatto {} aggiunto da attività modificata", contactId);
                     sleepSafe(1500);
                 }
-            }
+            }*/
 
             // 3️⃣ Log finale
             logger.info("✅ Totale contatti aggiornati: {}", contattiAggiornati.size());
