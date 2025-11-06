@@ -389,8 +389,8 @@ public class DealService {
                     if (contact.getIdAnagrafica() != null) {
                         req.setContactId(Long.valueOf(contact.getIdAnagrafica()));
                     } else {
-                        logger.warn("⚠️ Contatto {} senza nome, impostato come UNKNOWN", contactId);
-                        req.setContactId(-1L);
+                        logger.warn("⚠️ Contatto {} senza id Anagrafica", contactId);
+                        req.setContactId(contactId);
                     }
                     req.setResultCode(ResultCode.fromString(currentResultCode != null ? currentResultCode : "UNKNOWN"));
                     req.setCaller("3932644963");
