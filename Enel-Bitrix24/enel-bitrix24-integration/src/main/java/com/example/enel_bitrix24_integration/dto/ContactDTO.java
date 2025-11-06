@@ -48,7 +48,7 @@ public class ContactDTO {
 
     // --- Campi custom JSON del lotto ---
     @JsonProperty("idAnagrafica")
-    private String idAnagrafica;
+    private Long idAnagrafica;
 
     @JsonProperty("telefono")
     private String telefono;
@@ -63,8 +63,8 @@ public class ContactDTO {
     @JsonIgnore
     public void normalizeForBitrix() {
         // Se arriva solo idAnagrafica, usalo come nome
-        if (this.idAnagrafica != null && (this.NAME == null || this.NAME.isEmpty())) {
-            this.NAME = this.idAnagrafica;
+       if (this.idAnagrafica != null && (this.NAME == null || this.NAME.isEmpty())) {
+            this.NAME = String.valueOf(this.idAnagrafica);
         }
 
         // Se arriva telefono, costruisci lista MultiField
@@ -337,11 +337,11 @@ public class ContactDTO {
         this.MODIFY_BY_ID = MODIFY_BY_ID;
     }
 
-    public String getIdAnagrafica() {
+     public Long getIdAnagrafica() {
         return idAnagrafica;
     }
 
-    public void setIdAnagrafica(String idAnagrafica) {
+    public void setIdAnagrafica(Long idAnagrafica) {
         this.idAnagrafica = idAnagrafica;
     }
 
