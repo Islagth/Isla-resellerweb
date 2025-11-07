@@ -81,5 +81,19 @@ public class LeadRequest {
     public void setContactId(Long contactId) {
         this.contactId = contactId;
     }
+
+    @Override
+    public String toString() {
+        return "LeadRequest{" +
+                "workedCode='" + workedCode + '\'' +
+                ", worked_Date=" + worked_Date +
+                ", worked_End_Date=" + worked_End_Date +
+                ", resultCode=" + (resultCode != null ? resultCode.name() : null) +
+                ", caller='" + caller + '\'' +
+                ", workedType='" + workedType + '\'' +
+                ", campaignId=" + campaignId +
+                ", contactId=" + contactId +
+                '}';
+    }
     
 }
