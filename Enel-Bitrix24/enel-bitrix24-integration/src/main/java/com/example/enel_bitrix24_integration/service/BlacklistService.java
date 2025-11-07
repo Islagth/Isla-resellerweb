@@ -56,7 +56,7 @@ public class BlacklistService {
         return headers;
     }
 
-    Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = 300000)
     public List<LottoBlacklistDTO> verificaBlacklistDisponibili() {
         try {
             String url = baseUrl + "/partner-api/v5/blacklist";
