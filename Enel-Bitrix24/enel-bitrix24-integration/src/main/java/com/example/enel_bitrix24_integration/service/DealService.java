@@ -299,85 +299,25 @@ public class DealService {
 }
 
 
-
-
-   public String getResultCodeForDeal(Integer dealId) {
-        try {
-            // Seleziona ID, titolo e il campo custom del result code
-            List<String> select = List.of(
-                    "ID",
-                    "TITLE",
-                    "UfCrm1761843804",       // ID selezionato
-                    "UF_CRM_1761843804_ENUM"  // Lista opzioni (ID + VALUE)
-            );
-
-            Map<String, Object> filter = Map.of("ID", dealId);
-            List<DealDTO> deals = getDealsList(select, filter, null, 0).getDeals();
-
-            if (deals.isEmpty()) {
-                logger.warn("⚠️ Nessun deal trovato con ID {}", dealId);
-                return null;
-            }
-
-            Map<String, Object> dealMap = deals.get(0).getRawData();
-
-            // 1️⃣ Recupera l'ID selezionato
-            Object selectedId = dealMap.get("UfCrm1761843804");
-            if (selectedId == null) {
-                logger.info("ℹ️ Deal {} non ha result code selezionato", dealId);
-                return null;
-            }
-
-            // 2️⃣ Recupera la lista delle opzioni
-            Object enumObj = dealMap.get("UF_CRM_1761843804_ENUM");
-            if (enumObj instanceof List<?> enumList) {
-                for (Object item : enumList) {
-                    if (item instanceof Map<?, ?> mapItem) {
-                        Object id = mapItem.get("ID");
-                        Object value = mapItem.get("VALUE");
-
-                        if (id != null && id.toString().equals(selectedId.toString()) && value != null) {
-                            logger.info("📋 Result code per deal {}: {}", dealId, value);
-                            return value.toString(); // 🔹 Label leggibile
-                        }
-                    }
-                }
-            }
-
-            logger.info("ℹ️ Nessuna label trovata per result code selezionato nel deal {}", dealId);
-            return null;
-
-        } catch (Exception e) {
-            logger.error("❌ Errore durante il recupero di RESULT_CODE per deal {}: {}", dealId, e.getMessage(), e);
-            return null;
-        }
-    }
-
-
-    // Cache locale per attività
-
-    public List<LeadRequest> trovaContattiModificati() {
-        List<LeadRequest> modificati = new ArrayList<>();
+public List<DealDTO> recuperaTuttiDeal() {
         List<DealDTO> tuttiDeal = new ArrayList<>();
 
         try {
-            // 🔹 Mostra tutti i campi custom disponibili (solo per debug)
-            List<Map<String, Object>> customFields = listaCustomFieldsDeal();
-            logger.info("Lista completa dei campi custom dei deal: {}", customFields);
-            
-            // 1️⃣ Filtro per data ultima modifica
-            String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-            Map<String, Object> filter = Map.of(">DATE_MODIFY", filtroData);
-
-            // 2️⃣ Seleziona tutti i campi utili (inclusi i custom)
+            // 🔹 Seleziona i campi utili (standard + custom)
             List<String> select = List.of(
                     "ID",
                     "TITLE",
                     "DATE_MODIFY",
-                    "UfCrm1761843804",        // Result code (ID selezionato)
-                    "UF_CRM_1761843804_ENUM",   // Result code (lista opzioni)
-                    "UfCrm1762455213"      // Campo custom ID anagrafica
+                    "UF_CRM_1761843804",        // campo custom ResultCode
+                    "UF_CRM_1762455213"         // campo custom ID anagrafica
             );
+
+            // 🔹 Filtro: tutti i deal modificati da ultima verifica (o tutti se null)
+            Map<String, Object> filter = new HashMap<>();
+            if (ultimaVerifica != null) {
+                String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+                filter.put(">DATE_MODIFY", filtroData);
+            }
 
             int start = 0;
             while (true) {
@@ -386,99 +326,127 @@ public class DealService {
                 if (dealsPage.isEmpty()) break;
 
                 tuttiDeal.addAll(dealsPage);
+                logger.info("Recuperati {} deal da start={}", dealsPage.size(), start);
 
                 Integer next = result.getNextStart();
                 if (next == null || next == 0) break;
                 start = next;
 
-                sleepSafe(500);
+                sleepSafe(500); // evita rate limit
             }
 
-            for (DealDTO deal : tuttiDeal) {
-                // 🔹 Log rawData per capire la struttura reale dei campi custom
-                logger.info("Deal raw data (ID={}): {}", deal.getId(), deal.getRawData());
-
-                Integer dealId = deal.getId();
-                if (dealId == null) {
-                    logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
-                    continue;
-                }
-
-                // ✅ Leggi result code usando il metodo che gestisce enum/drop-down
-                String currentResultCode = getResultCodeForDeal(dealId);
-                String cachedResultCode = cacheResultCodeDeal.get(dealId);
-                boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
-
-
-                if (!modificato) continue;
-
-                // ✅ Recupera contatti del deal
-                List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
-                if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
-                    logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
-                    continue;
-                }
-
-                for (Long contactId : contattiDelDeal) {
-                    ContactDTO contact = contactService.getContattoById(contactId.intValue());
-                    if (contact == null) {
-                        logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
-                        continue;
-                    }
-
-                    LeadRequest req = new LeadRequest();
-
-                    // ✅ Leggi ID anagrafica dal campo custom
-                    Object idAnagrafica = deal.getRawData().get("UfCrm1762455213");
-                    if (idAnagrafica != null && !idAnagrafica.toString().isBlank()) {
-                        req.setContactId(Long.valueOf(idAnagrafica.toString()));
-                    } else {
-                        logger.warn("⚠️ Deal {} senza id anagrafica, imposto contactId = {}", dealId, contactId);
-                        req.setContactId(contactId);
-                    }
-
-                    // ✅ Imposta result code come enum (o UNKNOWN se null)
-                    req.setResultCode(ResultCode.fromString(
-                            currentResultCode != null ? currentResultCode : "UNKNOWN"));
-                    req.setCaller("3932644963");
-
-                    // ✅ Estrazione telefono principale
-                    String phone = (contact.getPHONE() != null && !contact.getPHONE().isEmpty())
-                            ? contact.getPHONE().get(0).getVALUE()
-                            : "+0000000000";
-                    req.setWorkedCode(phone);
-
-                    // ✅ Recupero ultima activity
-                    ActivityDTO ultimaActivity = activityService.getUltimaActivityPerDeal(dealId);
-                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null) {
-                        req.setWorked_Date(ultimaActivity.getStartTime());
-                        req.setWorked_End_Date(ultimaActivity.getEndTime() != null
-                                ? ultimaActivity.getEndTime()
-                                : ultimaActivity.getStartTime().plusMinutes(2));
-                    } else {
-                        LocalDateTime now = LocalDateTime.now();
-                        req.setWorked_Date(now);
-                        req.setWorked_End_Date(now.plusMinutes(2));
-                    }
-
-                    req.setWorkedType("O");
-                    req.setCampaignId(65704L);
-
-                    modificati.add(req);
-                    logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
-                }
-
-                // ✅ Aggiorna cache result code
-                cacheResultCodeDeal.put(dealId, currentResultCode != null ? currentResultCode : "UNKNOWN");
-            }
-
-            ultimaVerifica = LocalDateTime.now();
+            logger.info("✅ Totale deal recuperati da Bitrix: {}", tuttiDeal.size());
 
         } catch (Exception e) {
-            logger.error("🔥 Errore recupero/modifica deal", e);
+            logger.error("❌ Errore durante il recupero dei deal da Bitrix", e);
         }
 
-        logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
+        return tuttiDeal;
+    }
+
+
+    public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
+        List<LeadRequest> modificati = new ArrayList<>();
+
+        // ✅ Mappa veloce per convertire valore testuale in ResultCode
+        Map<String, ResultCode> resultCodeMap = new HashMap<>();
+        for (ResultCode rc : ResultCode.values()) {
+            resultCodeMap.put(rc.getEsito().toLowerCase(), rc);
+        }
+
+        for (DealDTO deal : tuttiDeal) {
+            logger.info("Deal raw data (ID={}): {}", deal.getId(), deal.getRawData());
+
+            Integer dealId = deal.getId();
+            if (dealId == null) {
+                logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
+                continue;
+            }
+
+            // ✅ Leggi result code dal campo custom e mappa sull'enum
+            ResultCode currentResultCode = ResultCode.UNKNOWN;
+            Object rawResult = deal.getRawData().get("UF_CRM_1761843804"); // campo custom ResultCode
+            if (rawResult != null && !rawResult.toString().isBlank()) {
+                String value = rawResult.toString().trim();
+                currentResultCode = resultCodeMap.getOrDefault(value.toLowerCase(), ResultCode.UNKNOWN);
+            }
+            logger.info("Deal {} - resultCode rilevato: {}", dealId, currentResultCode);
+
+            // ✅ Controlla se il result code è cambiato rispetto alla cache
+            String cachedResultCode = cacheResultCodeDeal.get(dealId);
+            boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode.name());
+            if (!modificato) {
+                logger.info("Deal {} - resultCode non modificato ({}), salto", dealId, currentResultCode);
+                continue;
+            }
+
+            // ✅ Recupera contatti del deal
+            List<Long> contattiDelDeal = getContattiDaDeal(Long.valueOf(dealId));
+            if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
+                logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
+                continue;
+            }
+
+            for (Long contactId : contattiDelDeal) {
+                ContactDTO contact = contactService.getContattoById(contactId.intValue());
+                if (contact == null) {
+                    logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
+                    continue;
+                }
+
+                LeadRequest req = new LeadRequest();
+
+                // ✅ Leggi ID anagrafica dal campo custom
+                Object idAnagrafica = deal.getRawData().get("UF_CRM_1762455213"); // campo custom ID anagrafica
+                if (idAnagrafica != null && !idAnagrafica.toString().isBlank()) {
+                    req.setContactId(Long.valueOf(idAnagrafica.toString()));
+                    logger.info("Deal {} - contactId impostato da ID anagrafica: {}", dealId, idAnagrafica);
+                } else {
+                    logger.warn("⚠️ Deal {} senza id anagrafica, imposto contactId = {}", dealId, contactId);
+                    req.setContactId(contactId);
+                }
+
+                // ✅ Imposta result code
+                req.setResultCode(currentResultCode);
+
+                // ✅ Imposta caller
+                req.setCaller("3932644963");
+
+                // ✅ Estrazione telefono principale
+                String phone = (contact.getPHONE() != null && !contact.getPHONE().isEmpty())
+                        ? contact.getPHONE().get(0).getVALUE()
+                        : "+0000000000";
+                req.setWorkedCode(phone);
+
+                // ✅ Recupero ultima activity
+                ActivityDTO ultimaActivity = activityService.getUltimaActivityPerDeal(dealId);
+                if (ultimaActivity != null && ultimaActivity.getStartTime() != null) {
+                    req.setWorked_Date(ultimaActivity.getStartTime());
+                    req.setWorked_End_Date(ultimaActivity.getEndTime() != null
+                            ? ultimaActivity.getEndTime()
+                            : ultimaActivity.getStartTime().plusMinutes(2));
+                    logger.info("Deal {} - ultima activity: start={}, end={}", dealId,
+                            req.getWorked_Date(), req.getWorked_End_Date());
+                } else {
+                    LocalDateTime now = LocalDateTime.now();
+                    req.setWorked_Date(now);
+                    req.setWorked_End_Date(now.plusMinutes(2));
+                    logger.info("Deal {} - nessuna activity trovata, imposto date corrente: {}", dealId, now);
+                }
+
+                req.setWorkedType("O");
+                req.setCampaignId(65704L);
+
+                modificati.add(req);
+                logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
+            }
+
+            // ✅ Aggiorna cache result code
+            cacheResultCodeDeal.put(dealId, currentResultCode.name());
+            logger.info("Deal {} - cache aggiornata con resultCode: {}", dealId, currentResultCode);
+        }
+
+        logger.info("✅ Totale LeadRequest creati: {}", modificati.size());
         return modificati;
     }
 
