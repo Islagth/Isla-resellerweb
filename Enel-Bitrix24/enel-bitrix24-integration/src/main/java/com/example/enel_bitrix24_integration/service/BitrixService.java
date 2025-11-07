@@ -3,7 +3,10 @@ package com.example.enel_bitrix24_integration.service;
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
 import com.example.enel_bitrix24_integration.dto.LeadResponse;
 import com.example.enel_bitrix24_integration.security.TokenService;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -63,22 +66,36 @@ public class BitrixService {
     /**
      * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
      */
-    public LeadResponse invioLavorato(LeadRequest request) {
+    public LeadResponse invioLavorato(LeadRequest leadRequest) {
         String url = baseUrl + "/partner-api/v5/workedcontact";
         logger.info("📤 Invio a Enel [{}]", url);
 
+        // ======================
+        // Headers con autenticazione + Content-Type corretto
+        // ======================
         HttpHeaders headers = getBearerAuthHeaders();
         headers.set(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8");
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
+        // ======================
+        // Configurazione ObjectMapper
+        // ======================
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.setDateFormat(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss"));
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+        // Serializza solo i campi annotati con @JsonProperty
+        mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE);
+        mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+
+        // ======================
+        // Serializzazione JSON
+        // ======================
         String jsonBody;
         try {
-            jsonBody = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            jsonBody = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(leadRequest);
             logger.info("📦 Body JSON inviato:\n{}", jsonBody);
         } catch (JsonProcessingException e) {
             logger.error("❌ Errore serializzazione JSON: {}", e.getMessage(), e);
@@ -90,11 +107,12 @@ public class BitrixService {
 
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
         RestTemplate restTemplate = new RestTemplate();
-
         int maxRetry = 3;
+
         for (int attempt = 1; attempt <= maxRetry; attempt++) {
             try {
-                logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, request.getWorkedCode());
+                logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, leadRequest.getWorkedCode());
+
                 ResponseEntity<LeadResponse> response = restTemplate.exchange(
                         url, HttpMethod.POST, entity, LeadResponse.class
                 );
@@ -116,10 +134,11 @@ public class BitrixService {
                 logger.error("❌ Errore di connessione al tentativo {}: {}", attempt, e.getMessage(), e);
 
             } catch (Exception e) {
-                logger.error("❌ Errore imprevisto al tentativo {}: {}",
-                        attempt, e.getMessage() != null ? e.getMessage() : e.toString(), e);
+                logger.error("❌ Errore imprevisto al tentativo {}: {}", attempt,
+                        e.getMessage() != null ? e.getMessage() : e.toString(), e);
             }
 
+            // Backoff progressivo
             try {
                 Thread.sleep(1000L * attempt);
             } catch (InterruptedException ie) {
@@ -133,6 +152,9 @@ public class BitrixService {
         fallback.setMessage("Errore imprevisto dopo " + maxRetry + " tentativi");
         return fallback;
     }
+
+
+
 
 
 
