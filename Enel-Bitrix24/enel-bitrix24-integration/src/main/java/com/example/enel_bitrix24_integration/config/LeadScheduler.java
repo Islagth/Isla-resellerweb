@@ -58,7 +58,6 @@ public class LeadScheduler {
             List<LeadRequest> tuttiContatti = dealService.trovaContattiModificati(tuttiDeal);
             for (LeadRequest lead : tuttiContatti) {
                 dealCache.put(lead.getContactId(), String.valueOf(lead.getResultCode()));
-                logger.info("Cache aggiornata: contactId={} -> resultCode={}", lead.getContactId(), lead.getResultCode());
             }
 
         } catch (Exception e) {
@@ -97,7 +96,6 @@ public class LeadScheduler {
         try {
             // 🔹 Recupera tutti i deal aggiornati
             List<DealDTO> tuttiDeal = dealService.recuperaTuttiDeal();
-            logger.info("Totale deal recuperati per scheduler: {}", tuttiDeal.size());
 
             if (tuttiDeal.isEmpty()) {
                 logger.info("📭 Nessun deal trovato in Bitrix.");
@@ -111,8 +109,7 @@ public class LeadScheduler {
             } else {
                 for (LeadRequest lead : leadsModificati) {
                     contattiInAttesa.add(lead);
-                    logger.info("📇 Contatto {} aggiunto dai contatti modificati (ResultCode: {})",
-                            lead.getContactId(), lead.getResultCode());
+                    logger.info("📇 Contatto {} aggiunto dai contatti modificati");
                     sleepSafe(300);
                 }
             }
