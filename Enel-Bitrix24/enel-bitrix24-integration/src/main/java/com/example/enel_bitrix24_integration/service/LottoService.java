@@ -113,16 +113,16 @@ public class LottoService {
     } */
 
     
-    @Scheduled(fixedRate = 60000) // ogni 60 secondi
+    @Scheduled(fixedRate = 60000)
     public List<LottoDTO> verificaLottiDisponibili() {
     try {
         String url = baseUrl + "/partner-api/v5/slices";
         logger.info("🔍 Avvio verifica lotti disponibili chiamando: {}", url);
 
-        // Usa la tua gestione del token già collaudata
-        HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
+        HttpHeaders headers = getBearerAuthHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.TEXT_PLAIN)); // 👈 forza risposta come testo
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        // Esegue la chiamata GET all’endpoint esterno
         ResponseEntity<String> response = restTemplate.exchange(
                 new URI(url),
                 HttpMethod.GET,
@@ -131,7 +131,6 @@ public class LottoService {
         );
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            // Deserializza il JSON in array di LottoDTO
             ultimiLotti = Arrays.asList(
                     objectMapper.readValue(response.getBody(), LottoDTO[].class)
             );
@@ -144,9 +143,9 @@ public class LottoService {
         logger.error("❌ Errore durante aggiornamento lotti: {}", e.getMessage(), e);
     }
 
-    // Restituisce una lista vuota se non ci sono lotti
     return ultimiLotti != null ? ultimiLotti : Collections.emptyList();
 }
+
 
 
 
