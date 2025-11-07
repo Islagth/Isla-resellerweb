@@ -1,6 +1,7 @@
 package com.example.enel_bitrix24_integration.config;
 
 import com.example.enel_bitrix24_integration.dto.ActivityDTO;
+import com.example.enel_bitrix24_integration.dto.DealDTO;
 import com.example.enel_bitrix24_integration.dto.LeadRequest;
 import com.example.enel_bitrix24_integration.dto.LeadResponse;
 import com.example.enel_bitrix24_integration.dto.ResultCode;
