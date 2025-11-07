@@ -370,6 +370,9 @@ public class DealService {
             }
 
             for (DealDTO deal : tuttiDeal) {
+                // 🔹 Log rawData per capire la struttura reale dei campi custom
+                logger.info("Deal raw data (ID={}): {}", deal.getId(), deal.getRawData());
+
                 Integer dealId = deal.getId();
                 if (dealId == null) {
                     logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
