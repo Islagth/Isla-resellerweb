@@ -47,7 +47,7 @@ public class LeadScheduler {
 
     @PostConstruct
     public void inizializzaCache() {
-        logger.info("🔄 Inizializzazione cache contatti e attività...");
+        logger.info("🔄 Inizializzazione cache contatti");
 
         try {
             // 🔹 Recupera tutti i deal da Bitrix
@@ -59,28 +59,6 @@ public class LeadScheduler {
             for (LeadRequest lead : tuttiContatti) {
                 dealCache.put(lead.getContactId(), String.valueOf(lead.getResultCode()));
                 logger.info("Cache aggiornata: contactId={} -> resultCode={}", lead.getContactId(), lead.getResultCode());
-            }
-
-            // 🔹 Attività iniziali
-            Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2);
-            int start = 0;
-            boolean continua = true;
-
-            while (continua) {
-                ActivityService.ActivityListResult result = activityService.getActivityList(filter, null, start);
-                List<ActivityDTO> attivitaIniziali = result.getActivities();
-
-                for (ActivityDTO attivita : attivitaIniziali) {
-                    attivitaCache.put(attivita.getId(), attivita);
-                    logger.info("Attività cache: activityId={} ownerId={}", attivita.getId(), attivita.getOwnerId());
-                }
-
-                Integer next = result.getNextStart();
-                if (next == null || next == 0) {
-                    continua = false;
-                } else {
-                    start = next;
-                }
             }
 
         } catch (Exception e) {
