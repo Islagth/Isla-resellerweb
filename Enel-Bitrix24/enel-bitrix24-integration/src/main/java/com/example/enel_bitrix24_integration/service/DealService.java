@@ -286,7 +286,7 @@ public class DealService {
             List<String> select = List.of(
                     "ID",
                     "TITLE",
-                    "UF_CRM_1761843804",       // ID selezionato
+                    "UfCrm1761843804",       // ID selezionato
                     "UF_CRM_1761843804_ENUM"  // Lista opzioni (ID + VALUE)
             );
 
@@ -301,7 +301,7 @@ public class DealService {
             Map<String, Object> dealMap = deals.get(0).getRawData();
 
             // 1️⃣ Recupera l'ID selezionato
-            Object selectedId = dealMap.get("UF_CRM_1761843804");
+            Object selectedId = dealMap.get("UfCrm1761843804");
             if (selectedId == null) {
                 logger.info("ℹ️ Deal {} non ha result code selezionato", dealId);
                 return null;
@@ -349,9 +349,9 @@ public class DealService {
                     "ID",
                     "TITLE",
                     "DATE_MODIFY",
-                    "UF_CRM_1761843804",        // Result code (ID selezionato)
+                    "UfCrm1761843804",        // Result code (ID selezionato)
                     "UF_CRM_1761843804_ENUM",   // Result code (lista opzioni)
-                    "UF_CRM_1762455213"      // Campo custom ID anagrafica
+                    "UfCrm1762455213"      // Campo custom ID anagrafica
             );
 
             int start = 0;
@@ -384,6 +384,7 @@ public class DealService {
                 String cachedResultCode = cacheResultCodeDeal.get(dealId);
                 boolean modificato = cachedResultCode == null || !cachedResultCode.equals(currentResultCode);
 
+
                 if (!modificato) continue;
 
                 // ✅ Recupera contatti del deal
@@ -403,7 +404,7 @@ public class DealService {
                     LeadRequest req = new LeadRequest();
 
                     // ✅ Leggi ID anagrafica dal campo custom
-                    Object idAnagrafica = deal.getRawData().get("UF_CRM_1762455213");
+                    Object idAnagrafica = deal.getRawData().get("UfCrm1762455213");
                     if (idAnagrafica != null && !idAnagrafica.toString().isBlank()) {
                         req.setContactId(Long.valueOf(idAnagrafica.toString()));
                     } else {
@@ -455,6 +456,7 @@ public class DealService {
         logger.info("✅ Totale contatti modificati trovati da deal: {}", modificati.size());
         return modificati;
     }
+
 
 
     
