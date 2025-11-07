@@ -243,37 +243,46 @@ public class DealService {
         }
     }
 
-   public List<Map<String, Object>> listaCustomFieldsDeal() {
-        try {
-            String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json";
+  public List<Map<String, Object>> listaCustomFieldsDeal() {
+    try {
+        String url = baseUrl + "/rest/9/8l35dfi7lq1xbjwz/crm.deal.userfield.list.json";
 
-            Map<String, Object> requestBody = Map.of(
-                    "filter", Collections.emptyMap(),
-                    "order", Map.of("SORT", "ASC", "ID", "ASC")
-            );
+        Map<String, Object> requestBody = Map.of(
+                "filter", Collections.emptyMap(),
+                "order", Map.of("SORT", "ASC", "ID", "ASC")
+        );
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, createJsonHeaders());
+        ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.POST, entity, JsonNode.class);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode result = root.path("result");
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            JsonNode root = response.getBody();
+            JsonNode result = root.path("result");
 
-                if (result.isArray()) {
-                    List<Map<String, Object>> fields = new ArrayList<>();
-                    for (JsonNode fieldNode : result) {
-                        fields.add(objectMapper.convertValue(fieldNode, Map.class));
-                    }
-                    logger.info("✅ Recuperati {} campi custom per i deal", fields.size());
-                    return fields;
+            if (result.isArray()) {
+                List<Map<String, Object>> fields = new ArrayList<>();
+                for (JsonNode fieldNode : result) {
+                    fields.add(objectMapper.convertValue(fieldNode, Map.class));
                 }
-            }
-        } catch (Exception e) {
-            logger.error("❌ Errore durante il recupero dei custom field dei deal: {}", e.getMessage(), e);
-        }
 
-        return Collections.emptyList();
+                logger.info("✅ Recuperati {} campi custom per i deal", fields.size());
+                for (Map<String, Object> field : fields) {
+                    logger.info("🔹 Nome interno: {}, Etichetta: {}, Tipo: {}",
+                            field.get("FIELD_NAME"),
+                            field.get("EDIT_FORM_LABEL"),
+                            field.get("USER_TYPE_ID"));
+                }
+
+                return fields;
+            }
+        }
+    } catch (Exception e) {
+        logger.error("❌ Errore durante il recupero dei custom field dei deal: {}", e.getMessage(), e);
     }
+
+    return Collections.emptyList();
+}
+
 
 
 
