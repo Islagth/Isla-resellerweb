@@ -64,21 +64,24 @@ public class BitrixService {
     String url = baseUrl + "/partner-api/v5/workedcontact";
     logger.info("📤 Invio a Enel [{}]", url);
 
+    // ✅ Header con autenticazione + Content-Type esplicito
     HttpHeaders headers = getBearerAuthHeaders();
     headers.set(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8");
     headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
+    // ✅ Configurazione ObjectMapper
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JavaTimeModule());
     mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     mapper.setDateFormat(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss"));
 
+    // ✅ Serializzazione manuale JSON
     String jsonBody;
     try {
         jsonBody = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
         logger.info("📦 Body JSON inviato:\n{}", jsonBody);
     } catch (JsonProcessingException e) {
-        logger.error("❌ Errore serializzazione JSON: {}", e.getMessage());
+        logger.error("❌ Errore serializzazione JSON: {}", e.getMessage(), e);
         LeadResponse err = new LeadResponse();
         err.setSuccess(false);
         err.setMessage("Errore serializzazione JSON: " + e.getMessage());
@@ -89,15 +92,17 @@ public class BitrixService {
     RestTemplate restTemplate = new RestTemplate();
 
     int maxRetry = 3;
+
     for (int attempt = 1; attempt <= maxRetry; attempt++) {
         try {
             logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, request.getWorkedCode());
 
             ResponseEntity<LeadResponse> response = restTemplate.exchange(
-                    url, HttpMethod.POST, entity, LeadResponse.class);
+                    url, HttpMethod.POST, entity, LeadResponse.class
+            );
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                logger.info("✅ Invio contatto riuscito al tentativo {}", attempt);
+                logger.info("✅ Invio riuscito al tentativo {}", attempt);
                 logger.info("📬 Risposta Enel:\n{}", 
                         mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response.getBody()));
                 return response.getBody();
@@ -105,31 +110,32 @@ public class BitrixService {
                 logger.warn("⚠️ Risposta non valida ({}): {}", response.getStatusCode(), response.getBody());
             }
 
-        } catch (HttpClientErrorException e) {
-            logger.error("❌ Errore HTTP al tentativo {}: {}", attempt, e.getResponseBodyAsString());
-            if (attempt == maxRetry) {
-                LeadResponse err = new LeadResponse();
-                err.setSuccess(false);
-                err.setMessage("Errore HTTP: " + e.getResponseBodyAsString());
-                return err;
-            }
-            try {
-                Thread.sleep(1000L * attempt);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                break;
-            }
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            logger.error("❌ Errore HTTP {} al tentativo {}: {} - {}", 
+                    e.getStatusCode(), attempt, e.getStatusText(), e.getResponseBodyAsString(), e);
+
+        } catch (ResourceAccessException e) {
+            logger.error("❌ Errore di connessione al tentativo {}: {}", attempt, e.getMessage(), e);
+
         } catch (Exception e) {
-            logger.error("❌ Errore al tentativo {}: {}", attempt, e.getMessage());
+            logger.error("❌ Errore imprevisto al tentativo {}: {}", 
+                    attempt, e.getMessage() != null ? e.getMessage() : e.toString(), e);
+        }
+
+        // ✅ Backoff progressivo
+        try {
+            Thread.sleep(1000L * attempt);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
         }
     }
 
     LeadResponse fallback = new LeadResponse();
     fallback.setSuccess(false);
-    fallback.setMessage("Errore imprevisto dopo tentativi multipli");
+    fallback.setMessage("Errore imprevisto dopo " + maxRetry + " tentativi");
     return fallback;
 }
-
 
 
     public LeadResponse invioLavoratoForm(LeadRequest request) {
