@@ -20,8 +20,10 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class BitrixService {
@@ -60,125 +62,157 @@ public class BitrixService {
      */
     public LeadResponse invioLavorato(LeadRequest request) {
         String url = baseUrl + "/partner-api/v5/worked";
-        int maxRetry = 3;
+        logger.info("📤 Invio a Enel [{}]", url);
 
-        // 📦 Prepara headers base
+        // ✅ Configurazione headers
         HttpHeaders headers = getBearerAuthHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        // 🧾 Log JSON prima dell'invio
+        // ✅ Configurazione del mapper (formato date corretto)
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // ✅ Log body JSON in formato leggibile
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new JavaTimeModule());
             String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            logger.info("📤 Invio a Enel [{}]", url);
             logger.info("📦 Body JSON inviato:\n{}", json);
         } catch (JsonProcessingException e) {
             logger.error("❌ Errore serializzazione JSON del request: {}", e.getMessage());
         }
 
-        // ✅ Entità JSON
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<LeadRequest> jsonEntity = new HttpEntity<>(request, headers);
+        // ✅ Configurazione RestTemplate con lo stesso mapper
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        converter.setObjectMapper(mapper);
+        RestTemplate restTemplate = new RestTemplate();
+        restTemplate.getMessageConverters().add(0, converter);
+
+        HttpEntity<LeadRequest> entity = new HttpEntity<>(request, headers);
+        int maxRetry = 3;
 
         for (int attempt = 1; attempt <= maxRetry; attempt++) {
             try {
                 logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, request);
-                ResponseEntity<LeadResponse> response = restTemplate.postForEntity(url, jsonEntity, LeadResponse.class);
+                ResponseEntity<LeadResponse> response = restTemplate.postForEntity(url, entity, LeadResponse.class);
 
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    logger.info("✅ Invio contatto riuscito in formato JSON al tentativo {}", attempt);
+                    logger.info("✅ Invio contatto riuscito al tentativo {}", attempt);
+                    logger.info("📬 Risposta Enel:\n{}", mapper.writerWithDefaultPrettyPrinter()
+                            .writeValueAsString(response.getBody()));
                     return response.getBody();
                 } else {
                     logger.warn("⚠️ Risposta non valida da Enel ({}): {}", response.getStatusCode(), response.getBody());
                 }
-            } catch (HttpClientErrorException e) {
-                logger.error("❌ Errore HTTP {} al tentativo {}: {}", e.getStatusCode(), attempt, e.getMessage());
 
-                // 🔁 Se l'errore è 415 → fallback su form-data
-                if (e.getStatusCode() == HttpStatus.UNSUPPORTED_MEDIA_TYPE) {
-                    logger.warn("🔄 Errore 415: passo automaticamente a invio form-data...");
-                    return invioLavoratoForm(request); // ⬅️ fallback automatico
-                }
+            } catch (HttpClientErrorException.UnsupportedMediaType e) {
+                logger.error("❌ Errore HTTP 415 UNSUPPORTED_MEDIA_TYPE al tentativo {}: {}", attempt, e.getMessage());
+                logger.warn("🔄 Errore 415: passo automaticamente a invio form-data...");
+                return invioLavoratoForm(request); // fallback
+
             } catch (Exception e) {
-                logger.error("❌ Errore generico al tentativo {}: {}", attempt, e.getMessage());
-            }
+                logger.error("❌ Errore al tentativo {}: {}", attempt, e.getMessage());
+                if (attempt == maxRetry) {
+                    LeadResponse error = new LeadResponse();
+                    error.setSuccess(false);
+                    error.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi: " + e.getMessage());
+                    return error;
+                }
 
-            // ⏱️ Backoff progressivo
-            try {
-                Thread.sleep(1000L * attempt);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                break;
+                try {
+                    Thread.sleep(1000L * attempt); // backoff progressivo
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         }
 
         LeadResponse fallback = new LeadResponse();
         fallback.setSuccess(false);
-        fallback.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi (JSON)");
+        fallback.setMessage("Errore imprevisto dopo tentativi multipli");
         return fallback;
     }
 
 
+
     private LeadResponse invioLavoratoForm(LeadRequest request) {
         String url = baseUrl + "/partner-api/v5/worked";
+        logger.info("📤 Invio a Enel [{}] in formato form-data", url);
 
         HttpHeaders headers = getBearerAuthHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-        boolean usaDescrizioneResultCode = false; // <-- metti a false se Enel vuole "D109"
-
+        // ✅ Preparazione form-data
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("workedCode", request.getWorkedCode());
-        form.add("worked_Date", request.getWorked_Date() != null ? request.getWorked_Date().toString() : "");
-        form.add("worked_End_Date", request.getWorked_End_Date() != null ? request.getWorked_End_Date().toString() : "");
+        form.add("worked_Date", request.getWorked_Date() != null
+                ? request.getWorked_Date().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                : "");
+        form.add("worked_End_Date", request.getWorked_End_Date() != null
+                ? request.getWorked_End_Date().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                : "");
+        form.add("resultCode", request.getResultCode() != null ? request.getResultCode().name() : "");
         form.add("caller", request.getCaller());
         form.add("workedType", request.getWorkedType());
         form.add("campaignId", request.getCampaignId() != null ? request.getCampaignId().toString() : "");
         form.add("contactId", request.getContactId() != null ? request.getContactId().toString() : "");
-       
+        
 
-        if (request.getResultCode() != null) {
-            String resultValue = usaDescrizioneResultCode
-                    ? request.getResultCode().getEsito()
-                    : request.getResultCode().name();
-            form.add("resultCode", resultValue);
-        }
+        // ✅ Log leggibile del form inviato
+        logger.info("📦 Form inviato:\n{}",
+                form.entrySet().stream()
+                        .map(e -> e.getKey() + "=" + e.getValue())
+                        .collect(Collectors.joining("\n"))
+        );
 
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
-
+        RestTemplate restTemplate = new RestTemplate();
         int maxRetry = 3;
+
         for (int attempt = 1; attempt <= maxRetry; attempt++) {
             try {
                 logger.info("📨 Invio contatto lavorato (form) tentativo {}: {}", attempt, request);
-                logger.info("📦 Form inviato:\n{}", form);
 
-                ResponseEntity<LeadResponse> response = restTemplate.postForEntity(url, entity, LeadResponse.class);
+                ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    logger.info("✅ Invio contatto riuscito in formato form-data al tentativo {}", attempt);
-                    return response.getBody();
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    logger.info("✅ Invio contatto riuscito (form) al tentativo {}", attempt);
+                    logger.info("📬 Risposta Enel (form):\n{}", response.getBody());
+
+                    LeadResponse success = new LeadResponse();
+                    success.setSuccess(true);
+                    success.setMessage(response.getBody());
+                    return success;
                 } else {
-                    logger.warn("⚠️ Risposta non valida da Enel ({}): {}", response.getStatusCode(), response.getBody());
+                    logger.warn("⚠️ Risposta non valida da Enel (form) ({}): {}", response.getStatusCode(), response.getBody());
                 }
+
             } catch (Exception e) {
                 logger.error("❌ Errore al tentativo {} (form-data): {}", attempt, e.getMessage());
-            }
+                if (attempt == maxRetry) {
+                    LeadResponse error = new LeadResponse();
+                    error.setSuccess(false);
+                    error.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi (form-data): " + e.getMessage());
+                    return error;
+                }
 
-            try {
-                Thread.sleep(1000L * attempt);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                break;
+                try {
+                    Thread.sleep(1000L * attempt); // Backoff progressivo
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         }
 
         LeadResponse fallback = new LeadResponse();
         fallback.setSuccess(false);
-        fallback.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi (form-data)");
+        fallback.setMessage("Errore imprevisto dopo tentativi multipli (form-data)");
         return fallback;
     }
+
 
 
 }
