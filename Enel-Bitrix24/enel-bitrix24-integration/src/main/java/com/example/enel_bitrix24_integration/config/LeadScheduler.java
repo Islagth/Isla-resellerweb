@@ -162,7 +162,7 @@ public class LeadScheduler {
     /**
      * 📤 Ogni ora invia i contatti accumulati verso Enel
      */
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 0/30 * * * ?")
     public void invioMultiploContatti() {
         if (contattiInAttesa.isEmpty()) {
             logger.info("📭 Nessun contatto da inviare in questo ciclo orario.");
