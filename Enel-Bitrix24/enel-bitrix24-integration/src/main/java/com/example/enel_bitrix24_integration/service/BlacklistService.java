@@ -13,7 +13,7 @@ import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.core.ParameterizedTypeReference;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
