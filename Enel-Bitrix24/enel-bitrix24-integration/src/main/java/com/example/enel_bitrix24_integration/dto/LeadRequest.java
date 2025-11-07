@@ -1,6 +1,7 @@
 package com.example.enel_bitrix24_integration.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -9,17 +10,30 @@ import java.time.LocalDateTime;
 
 public class LeadRequest {
 
+    @JsonProperty("workedCode")
     private String workedCode;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonProperty("workedDate")
     private LocalDateTime worked_Date;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonProperty("workedEndDate")
     private LocalDateTime worked_End_Date;
 
+    @JsonProperty("resultCode")
     private ResultCode resultCode;
+
+    @JsonProperty("caller")
     private String caller;
+
+    @JsonProperty("workedType")
     private String workedType;
+
+    @JsonProperty("campaignId")
     private Long campaignId;
+
+    @JsonProperty("contactId")
     private Long contactId;
 
 
@@ -102,4 +116,5 @@ public class LeadRequest {
     }
 
 }
+
 
