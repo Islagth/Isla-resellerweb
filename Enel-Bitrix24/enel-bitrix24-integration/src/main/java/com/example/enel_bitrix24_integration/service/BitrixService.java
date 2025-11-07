@@ -137,7 +137,7 @@ public class BitrixService {
         form.add("workedType", request.getWorkedType());
         form.add("campaignId", request.getCampaignId() != null ? request.getCampaignId().toString() : "");
         form.add("contactId", request.getContactId() != null ? request.getContactId().toString() : "");
-        form.add("chatHistory", request.getChatHistory());
+       
 
         if (request.getResultCode() != null) {
             String resultValue = usaDescrizioneResultCode
