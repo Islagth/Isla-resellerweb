@@ -49,13 +49,18 @@ public class LeadScheduler {
         logger.info("🔄 Inizializzazione cache contatti e attività...");
 
         try {
-            // Usa la versione aggiornata che recupera tutti i contatti modificati con paginazione
-            List<LeadRequest> tuttiContatti = dealService.trovaContattiModificati();
+            // 🔹 Recupera tutti i deal da Bitrix
+            List<DealDTO> tuttiDeal = dealService.recuperaTuttiDeal();
+            logger.info("Totale deal recuperati per inizializzazione cache: {}", tuttiDeal.size());
+
+            // 🔹 Contatti modificati
+            List<LeadRequest> tuttiContatti = dealService.trovaContattiModificati(tuttiDeal);
             for (LeadRequest lead : tuttiContatti) {
                 dealCache.put(lead.getContactId(), String.valueOf(lead.getResultCode()));
+                logger.info("Cache aggiornata: contactId={} -> resultCode={}", lead.getContactId(), lead.getResultCode());
             }
 
-            // Usa filtro Integer per attività e ciclo paginato per recuperare tutte le attività
+            // 🔹 Attività iniziali
             Map<String, Object> filter = Map.of("OWNER_TYPE_ID", 2);
             int start = 0;
             boolean continua = true;
@@ -66,6 +71,7 @@ public class LeadScheduler {
 
                 for (ActivityDTO attivita : attivitaIniziali) {
                     attivitaCache.put(attivita.getId(), attivita);
+                    logger.info("Attività cache: activityId={} ownerId={}", attivita.getId(), attivita.getOwnerId());
                 }
 
                 Integer next = result.getNextStart();
@@ -84,6 +90,7 @@ public class LeadScheduler {
     }
 
 
+
     /**
      * Aggiunge un contatto alla lista in attesa di invio
      */
@@ -98,7 +105,7 @@ public class LeadScheduler {
         try { Thread.sleep(millis); } catch (InterruptedException ignored) {}
     }
 
-    @Scheduled(fixedRate = 1800000) // ogni 30 minuti
+    @Scheduled(fixedRate = 1800000)
     public synchronized void controllaModifiche() {
         if (inEsecuzione) {
             logger.warn("⏳ Scheduler già in esecuzione. Salto questo ciclo.");
@@ -109,15 +116,21 @@ public class LeadScheduler {
         logger.info("⏰ Avvio controllo periodico modifiche contatti e attività deal...");
 
         try {
-            Set<Long> contattiAggiornati = new HashSet<>();
+            // 🔹 Recupera tutti i deal aggiornati
+            List<DealDTO> tuttiDeal = dealService.recuperaTuttiDeal();
+            logger.info("Totale deal recuperati per scheduler: {}", tuttiDeal.size());
 
-            // 1️⃣ Contatti modificati (versione paginata)
-            List<LeadRequest> leadsModificati = dealService.trovaContattiModificati();
+            if (tuttiDeal.isEmpty()) {
+                logger.info("📭 Nessun deal trovato in Bitrix.");
+                return;
+            }
+
+            // 🔹 Contatti modificati
+            List<LeadRequest> leadsModificati = dealService.trovaContattiModificati(tuttiDeal);
             if (leadsModificati.isEmpty()) {
                 logger.info("📭 Nessun contatto modificato rilevato.");
             } else {
                 for (LeadRequest lead : leadsModificati) {
-                    contattiAggiornati.add(lead.getContactId());
                     contattiInAttesa.add(lead);
                     logger.info("📇 Contatto {} aggiunto dai contatti modificati (ResultCode: {})",
                             lead.getContactId(), lead.getResultCode());
@@ -125,27 +138,6 @@ public class LeadScheduler {
                 }
             }
 
-            /* 2️⃣ Attività modificate → gestite con filtro Integer e ciclo paginato
-            Set<Long> contattiDaAttivita = activityService.trovaContattiInAttesaDaAttivitaModificate();
-            if (!contattiDaAttivita.isEmpty()) {
-                contattiAggiornati.addAll(contattiDaAttivita);
-                for (Long contactId : contattiDaAttivita) {
-                    LeadRequest req = new LeadRequest();
-                    req.setContactId(contactId);
-                    req.setWorkedCode("AUTO_FROM_SCHEDULER");
-                    req.setCaller("AUTO_SCHEDULER");
-                    req.setResultCode(ResultCode.D102); // Default se non diversamente specificato
-                    req.setWorkedType("O");
-                    req.setWorked_Date(LocalDateTime.now());
-                    req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
-                    contattiInAttesa.add(req);
-                    logger.info("🟡 Contatto {} aggiunto da attività modificata", contactId);
-                    sleepSafe(1500);
-                }
-            }*/
-
-            // 3️⃣ Log finale
-            logger.info("✅ Totale contatti aggiornati: {}", contattiAggiornati.size());
             logger.info("✅ Totale contatti in attesa: {}", contattiInAttesa.size());
 
         } catch (Exception e) {
@@ -155,7 +147,6 @@ public class LeadScheduler {
             logger.info("🏁 Controllo completato.");
         }
     }
-
 
 
 
