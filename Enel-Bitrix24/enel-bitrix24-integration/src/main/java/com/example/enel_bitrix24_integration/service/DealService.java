@@ -355,7 +355,6 @@ public List<DealDTO> recuperaTuttiDeal() {
         }
 
         for (DealDTO deal : tuttiDeal) {
-            logger.info("Deal raw data (ID={}): {}", deal.getId(), deal.getRawData());
 
             Integer dealId = deal.getId();
             if (dealId == null) {
