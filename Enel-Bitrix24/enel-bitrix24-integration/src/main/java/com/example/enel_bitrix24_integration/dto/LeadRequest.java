@@ -10,19 +10,20 @@ import java.time.LocalDateTime;
 
 public class LeadRequest {
 
+
     @JsonProperty("workedCode")
     private String workedCode;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
     @JsonProperty("workedDate")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
     private LocalDateTime workedDate;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
     @JsonProperty("workedEndDate")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
     private LocalDateTime workedEndDate;
 
     @JsonProperty("resultCode")
-    private ResultCode resultCode;
+    private ResultCode resultCode;  // puoi usare enum se vuoi
 
     @JsonProperty("caller")
     private String caller;
@@ -105,8 +106,8 @@ public class LeadRequest {
     public String toString() {
         return "LeadRequest{" +
                 "workedCode='" + workedCode + '\'' +
-                ", worked_Date=" + workedDate +
-                ", worked_End_Date=" + workedEndDate +
+                ", workedDate=" + workedDate +
+                ", workedEndDate=" + workedEndDate +
                 ", resultCode=" + (resultCode != null ? resultCode.name() : null) +
                 ", caller='" + caller + '\'' +
                 ", workedType='" + workedType + '\'' +
