@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -153,11 +154,13 @@ public class LottoService {
         logger.info("Scaricamento JSON per lotto id: {}", idLotto);
 
         HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
-        ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
+        ResponseEntity<JsonNode> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, JsonNode.class);
 
         if (response.getStatusCode().is2xxSuccessful()) {
+            JsonNode json = response.getBody();
             logger.info("✅ Scaricamento completato per lotto id: {}", idLotto);
-            return response.getBody();
+            logger.info("📦 Contenuto JSON (indentato):\n{}", json.toPrettyString());
+            return json.toString(); // restituisci come stringa se serve a valle
         } else if (response.getStatusCode() == HttpStatus.NOT_FOUND) {
             logger.warn("⚠️ Slice Id non trovato per lotto id: {}", idLotto);
             throw new RuntimeException("Slice Id not found");
