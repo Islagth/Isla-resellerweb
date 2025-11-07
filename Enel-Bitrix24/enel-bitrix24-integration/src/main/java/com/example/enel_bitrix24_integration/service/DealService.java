@@ -361,6 +361,10 @@ public class DealService {
         List<DealDTO> tuttiDeal = new ArrayList<>();
 
         try {
+            // 🔹 Mostra tutti i campi custom disponibili (solo per debug)
+            List<Map<String, Object>> customFields = listaCustomFieldsDeal();
+            logger.info("Lista completa dei campi custom dei deal: {}", customFields);
+            
             // 1️⃣ Filtro per data ultima modifica
             String filtroData = ultimaVerifica.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
             Map<String, Object> filter = Map.of(">DATE_MODIFY", filtroData);
