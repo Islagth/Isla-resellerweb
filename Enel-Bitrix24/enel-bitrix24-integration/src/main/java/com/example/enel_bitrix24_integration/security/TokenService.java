@@ -155,4 +155,8 @@ public class TokenService {
             throw new RuntimeException("Errore nella generazione del client_assertion JWT", e);
         }
     }
+
+    public String getToken() {
+        return "";
+    }
 }
