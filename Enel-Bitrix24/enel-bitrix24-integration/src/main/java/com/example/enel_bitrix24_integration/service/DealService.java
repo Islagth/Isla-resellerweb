@@ -77,6 +77,7 @@ public class DealService {
         logger.info("Creazione deal per anagrafica {}", dto.getIdAnagrafica());
 
         Map<String, Object> fields = new HashMap<>();
+        fields.put("TITLE", "Lotto " + dto.getIdAnagrafica());
         fields.put("UF_CRM_1762455213", dto.getIdAnagrafica());  // eventuale campo personalizzato
 
         Map<String, Object> requestBody = new HashMap<>();
