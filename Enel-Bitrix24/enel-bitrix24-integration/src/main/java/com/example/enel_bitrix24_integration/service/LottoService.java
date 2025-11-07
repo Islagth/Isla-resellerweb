@@ -117,23 +117,38 @@ public class LottoService {
     public List<LottoDTO> verificaLottiDisponibili() {
         try {
             String url = baseUrl + "/partner-api/v5/slices";
-            logger.info("Avvio verifica lotti disponibili chiamando: {}", url);
+            logger.info("🔍 Avvio verifica lotti disponibili chiamando: {}", url);
 
-            HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
+            // Creazione headers con autenticazione Bearer e JSON
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(tokenService.getToken());
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            ResponseEntity<String> response = restTemplate.exchange(new URI(url), HttpMethod.GET, entity, String.class);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            if (response.getStatusCode().is2xxSuccessful()) {
-                ultimiLotti = Arrays.asList(objectMapper.readValue(response.getBody(), LottoDTO[].class));
-                logger.info("Lotti aggiornati: {}", ultimiLotti.size());
+            // ✅ Deserializza direttamente in LottoDTO[]
+            ResponseEntity<LottoDTO[]> response = restTemplate.exchange(
+                    new URI(url),
+                    HttpMethod.GET,
+                    entity,
+                    LottoDTO[].class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                ultimiLotti = Arrays.asList(response.getBody());
+                logger.info("✅ Lotti aggiornati correttamente: {}", ultimiLotti.size());
             } else {
-                logger.error("Errore nella chiamata API esterna: {}", response.getStatusCode());
+                logger.error("❌ Errore nella chiamata API esterna: {}", response.getStatusCode());
             }
+
         } catch (Exception e) {
-            logger.error("Errore durante aggiornamento lotti: {}", e.getMessage(), e);
+            logger.error("❌ Errore durante aggiornamento lotti: {}", e.getMessage(), e);
         }
-        return ultimiLotti;
-    } 
+
+        return ultimiLotti != null ? ultimiLotti : Collections.emptyList();
+    }
+
 
 
     // Scarica JSON di un lotto specifico
