@@ -21,6 +21,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -63,127 +64,60 @@ public class BitrixService {
      * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
      */
     public LeadResponse invioLavorato(LeadRequest request) {
-    String url = baseUrl + "/partner-api/v5/workedcontact";
-    logger.info("📤 Invio a Enel [{}]", url);
+        String url = baseUrl + "/partner-api/v5/workedcontact";
+        logger.info("📤 Invio a Enel [{}]", url);
 
-    // ✅ Header con autenticazione + Content-Type esplicito
-    HttpHeaders headers = getBearerAuthHeaders();
-    headers.set(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8");
-    headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        HttpHeaders headers = getBearerAuthHeaders();
+        headers.set(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8");
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
-    // ✅ Configurazione ObjectMapper
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.registerModule(new JavaTimeModule());
-    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    mapper.setDateFormat(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss"));
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.setDateFormat(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss"));
 
-    // ✅ Serializzazione manuale JSON
-    String jsonBody;
-    try {
-        jsonBody = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-        logger.info("📦 Body JSON inviato:\n{}", jsonBody);
-    } catch (JsonProcessingException e) {
-        logger.error("❌ Errore serializzazione JSON: {}", e.getMessage(), e);
-        LeadResponse err = new LeadResponse();
-        err.setSuccess(false);
-        err.setMessage("Errore serializzazione JSON: " + e.getMessage());
-        return err;
-    }
-
-    HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-    RestTemplate restTemplate = new RestTemplate();
-
-    int maxRetry = 3;
-
-    for (int attempt = 1; attempt <= maxRetry; attempt++) {
+        String jsonBody;
         try {
-            logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, request.getWorkedCode());
-
-            ResponseEntity<LeadResponse> response = restTemplate.exchange(
-                    url, HttpMethod.POST, entity, LeadResponse.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                logger.info("✅ Invio riuscito al tentativo {}", attempt);
-                logger.info("📬 Risposta Enel:\n{}", 
-                        mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response.getBody()));
-                return response.getBody();
-            } else {
-                logger.warn("⚠️ Risposta non valida ({}): {}", response.getStatusCode(), response.getBody());
-            }
-
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            logger.error("❌ Errore HTTP {} al tentativo {}: {} - {}", 
-                    e.getStatusCode(), attempt, e.getStatusText(), e.getResponseBodyAsString(), e);
-
-        } catch (ResourceAccessException e) {
-            logger.error("❌ Errore di connessione al tentativo {}: {}", attempt, e.getMessage(), e);
-
-        } catch (Exception e) {
-            logger.error("❌ Errore imprevisto al tentativo {}: {}", 
-                    attempt, e.getMessage() != null ? e.getMessage() : e.toString(), e);
+            jsonBody = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            logger.info("📦 Body JSON inviato:\n{}", jsonBody);
+        } catch (JsonProcessingException e) {
+            logger.error("❌ Errore serializzazione JSON: {}", e.getMessage(), e);
+            LeadResponse err = new LeadResponse();
+            err.setSuccess(false);
+            err.setMessage("Errore serializzazione JSON: " + e.getMessage());
+            return err;
         }
 
-        // ✅ Backoff progressivo
-        try {
-            Thread.sleep(1000L * attempt);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            break;
-        }
-    }
+        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
+        RestTemplate restTemplate = new RestTemplate();
 
-    LeadResponse fallback = new LeadResponse();
-    fallback.setSuccess(false);
-    fallback.setMessage("Errore imprevisto dopo " + maxRetry + " tentativi");
-    return fallback;
-}
+        int maxRetry = 3;
+        for (int attempt = 1; attempt <= maxRetry; attempt++) {
+            try {
+                logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, request.getWorkedCode());
+                ResponseEntity<LeadResponse> response = restTemplate.exchange(
+                        url, HttpMethod.POST, entity, LeadResponse.class
+                );
 
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    logger.info("✅ Invio riuscito al tentativo {}", attempt);
+                    logger.info("📬 Risposta Enel:\n{}",
+                            mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response.getBody()));
+                    return response.getBody();
+                } else {
+                    logger.warn("⚠️ Risposta non valida ({}): {}", response.getStatusCode(), response.getBody());
+                }
 
-    public LeadResponse invioLavoratoForm(LeadRequest request) {
-    String url = baseUrl + "/partner-api/v5/workedcontact";
-    logger.info("📤 Invio a Enel [{}] in formato form-data", url);
+            } catch (HttpClientErrorException | HttpServerErrorException e) {
+                logger.error("❌ Errore HTTP {} al tentativo {}: {} - {}",
+                        e.getStatusCode(), attempt, e.getStatusText(), e.getResponseBodyAsString(), e);
 
-    HttpHeaders headers = getBearerAuthHeaders();
-    headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            } catch (ResourceAccessException e) {
+                logger.error("❌ Errore di connessione al tentativo {}: {}", attempt, e.getMessage(), e);
 
-    MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-    form.add("workedCode", request.getWorkedCode());
-    form.add("worked_Date", request.getWorked_Date() != null ? request.getWorked_Date().toString() : "");
-    form.add("worked_End_Date", request.getWorked_End_Date() != null ? request.getWorked_End_Date().toString() : "");
-    form.add("resultCode", request.getResultCode() != null ? request.getResultCode().name() : "");
-    form.add("caller", request.getCaller());
-    form.add("workedType", request.getWorkedType());
-    form.add("campaignId", String.valueOf(request.getCampaignId()));
-    form.add("contactId", String.valueOf(request.getContactId()));
-
-    logger.info("📦 Form inviato:");
-    form.forEach((k, v) -> logger.info("{}={}", k, v));
-
-    HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(form, headers);
-
-    RestTemplate restTemplate = new RestTemplate();
-    int maxRetry = 3;
-
-    for (int attempt = 1; attempt <= maxRetry; attempt++) {
-        try {
-            logger.info("📨 Invio contatto lavorato (form) tentativo {}: {}", attempt, request);
-            ResponseEntity<LeadResponse> response = restTemplate.postForEntity(url, entity, LeadResponse.class);
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                logger.info("✅ Invio contatto (form) riuscito al tentativo {}", attempt);
-                return response.getBody();
-            }
-
-            logger.warn("⚠️ Risposta non valida ({}): {}", response.getStatusCode(), response.getBody());
-
-        } catch (Exception e) {
-            logger.error("❌ Errore al tentativo {} (form-data): {}", attempt, e.getMessage());
-            if (attempt == maxRetry) {
-                LeadResponse err = new LeadResponse();
-                err.setSuccess(false);
-                err.setMessage("Errore chiamata API dopo " + maxRetry + " tentativi (form-data): " + e.getMessage());
-                return err;
+            } catch (Exception e) {
+                logger.error("❌ Errore imprevisto al tentativo {}: {}",
+                        attempt, e.getMessage() != null ? e.getMessage() : e.toString(), e);
             }
 
             try {
@@ -193,12 +127,13 @@ public class BitrixService {
                 break;
             }
         }
+
+        LeadResponse fallback = new LeadResponse();
+        fallback.setSuccess(false);
+        fallback.setMessage("Errore imprevisto dopo " + maxRetry + " tentativi");
+        return fallback;
     }
 
-    LeadResponse fallback = new LeadResponse();
-    fallback.setSuccess(false);
-    fallback.setMessage("Errore imprevisto dopo tentativi multipli (form)");
-    return fallback;
-}
+
 
 }
