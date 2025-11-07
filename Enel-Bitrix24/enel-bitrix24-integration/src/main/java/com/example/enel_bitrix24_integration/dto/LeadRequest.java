@@ -15,11 +15,11 @@ public class LeadRequest {
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
     @JsonProperty("workedDate")
-    private LocalDateTime worked_Date;
+    private LocalDateTime workedDate;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
     @JsonProperty("workedEndDate")
-    private LocalDateTime worked_End_Date;
+    private LocalDateTime workedEndDate;
 
     @JsonProperty("resultCode")
     private ResultCode resultCode;
@@ -46,19 +46,19 @@ public class LeadRequest {
     }
 
     public LocalDateTime getWorked_Date() {
-        return worked_Date;
+        return workedDate;
     }
 
     public void setWorked_Date(LocalDateTime worked_Date) {
-        this.worked_Date = worked_Date;
+        this.workedDate = worked_Date;
     }
 
     public LocalDateTime getWorked_End_Date() {
-        return worked_End_Date;
+        return workedEndDate;
     }
 
     public void setWorked_End_Date(LocalDateTime worked_End_Date) {
-        this.worked_End_Date = worked_End_Date;
+        this.workedEndDate = worked_End_Date;
     }
 
     public ResultCode getResultCode() {
@@ -105,8 +105,8 @@ public class LeadRequest {
     public String toString() {
         return "LeadRequest{" +
                 "workedCode='" + workedCode + '\'' +
-                ", worked_Date=" + worked_Date +
-                ", worked_End_Date=" + worked_End_Date +
+                ", worked_Date=" + workedDate +
+                ", worked_End_Date=" + workedEndDate +
                 ", resultCode=" + (resultCode != null ? resultCode.name() : null) +
                 ", caller='" + caller + '\'' +
                 ", workedType='" + workedType + '\'' +
@@ -116,5 +116,3 @@ public class LeadRequest {
     }
 
 }
-
-
