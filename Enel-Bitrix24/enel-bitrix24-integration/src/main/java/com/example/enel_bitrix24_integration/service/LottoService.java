@@ -114,8 +114,8 @@ public class LottoService {
     } */
 
     
-    @Scheduled(fixedRate = 60000) // ogni 60 secondi
-public List<LottoDTO> verificaLottiDisponibili() {
+    @Scheduled(fixedRate = 300000) 
+    public List<LottoDTO> verificaLottiDisponibili() {
     try {
         String url = baseUrl + "/partner-api/v5/slices";
         logger.info("🔍 Avvio verifica lotti disponibili chiamando: {}", url);
