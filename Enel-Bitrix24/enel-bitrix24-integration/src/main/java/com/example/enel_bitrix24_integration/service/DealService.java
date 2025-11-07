@@ -147,7 +147,7 @@ public class DealService {
     // ----------------- LISTA DEAL -----------------
      public DealListResult getDealsList(List<String> select, Map<String, Object> filter,
                                        Map<String, String> order, int start) {
-        logger.info("Richiesta lista deal con filter: {}, order: {}, start: {}", filter, order, start);
+        logger.info("Richiesta lista deal");
         String url = baseUrl + "/rest/9/9yi2oktsybau3wkn/crm.deal.list.json";
 
         Map<String, Object> requestBody = new HashMap<>();
