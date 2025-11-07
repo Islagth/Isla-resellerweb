@@ -56,41 +56,40 @@ public class BlacklistService {
         return headers;
     }
 
-    @Scheduled(fixedRate = 300000)
-    public List<LottoBlacklistDTO> verificaBlacklistDisponibili() {
-        try {
-            String url = baseUrl + "/partner-api/v5/blacklist";
-            logger.info("🔍 Avvio verifica lotti blacklist chiamando: {}", url);
+    @Scheduled(fixedRate = 300000) // ogni 5 minuti
+public List<LottoBlacklistDTO> verificaBlacklistDisponibili() {
+    try {
+        String url = baseUrl + "/partner-api/v5/blacklist";
+        logger.info("🔍 Avvio verifica lotti blacklist chiamando: {}", url);
 
-            // Crea headers corretti con Bearer token e tipo JSON
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(tokenService.getToken());
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        // Riutilizzi la logica esistente per gestire i token
+        HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
 
-            HttpEntity<String> entity = new HttpEntity<>(headers);
+        // Chiamata REST con RestTemplate
+        ResponseEntity<String> response = restTemplate.exchange(
+                new URI(url),
+                HttpMethod.GET,
+                entity,
+                String.class
+        );
 
-            // ✅ Deserializza direttamente in LottoBlacklistDTO[]
-            ResponseEntity<LottoBlacklistDTO[]> response = restTemplate.exchange(
-                    new URI(url),
-                    HttpMethod.GET,
-                    entity,
-                    LottoBlacklistDTO[].class
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            // Deserializzazione in array di DTO
+            ultimiLottiBlacklist = Arrays.asList(
+                    objectMapper.readValue(response.getBody(), LottoBlacklistDTO[].class)
             );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                ultimiLottiBlacklist = Arrays.asList(response.getBody());
-                logger.info("✅ Lotti blacklist aggiornati: {}", ultimiLottiBlacklist.size());
-            } else {
-                logger.error("❌ Errore nella chiamata API esterna: {}", response.getStatusCode());
-            }
-
-        } catch (Exception e) {
-            logger.error("❌ Errore durante la verifica lotti di blacklist: {}", e.getMessage(), e);
+            logger.info("✅ Lotti blacklist aggiornati: {}", ultimiLottiBlacklist.size());
+        } else {
+            logger.error("❌ Errore nella chiamata API esterna: {}", response.getStatusCode());
         }
 
-        return ultimiLottiBlacklist != null ? ultimiLottiBlacklist : Collections.emptyList();
+    } catch (Exception e) {
+        logger.error("❌ Errore durante la verifica lotti di blacklist: {}", e.getMessage(), e);
     }
+
+    return ultimiLottiBlacklist != null ? ultimiLottiBlacklist : Collections.emptyList();
+}
+
 
     public byte[] scaricaLottoBlacklistZip(long idLotto) throws Exception {
         String url = baseUrl + "/partner-api/v5/blacklist/" + idLotto + ".zip";
