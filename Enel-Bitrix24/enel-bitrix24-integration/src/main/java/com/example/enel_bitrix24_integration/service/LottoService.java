@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -113,27 +114,24 @@ public class LottoService {
     } */
 
     
-    @Scheduled(fixedRate = 60000)
-    public List<LottoDTO> verificaLottiDisponibili() {
+    @Scheduled(fixedRate = 60000) // ogni 60 secondi
+public List<LottoDTO> verificaLottiDisponibili() {
     try {
         String url = baseUrl + "/partner-api/v5/slices";
         logger.info("🔍 Avvio verifica lotti disponibili chiamando: {}", url);
 
-        HttpHeaders headers = getBearerAuthHeaders();
-        headers.setAccept(Collections.singletonList(MediaType.TEXT_PLAIN)); // 👈 forza risposta come testo
-        HttpEntity<String> entity = new HttpEntity<>(headers);
+        HttpEntity<String> entity = new HttpEntity<>(getBearerAuthHeaders());
 
-        ResponseEntity<String> response = restTemplate.exchange(
+        // ✅ Soluzione definitiva: deserializzazione diretta in List<LottoDTO>
+        ResponseEntity<List<LottoDTO>> response = restTemplate.exchange(
                 new URI(url),
                 HttpMethod.GET,
                 entity,
-                String.class
+                new ParameterizedTypeReference<List<LottoDTO>>() {}
         );
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            ultimiLotti = Arrays.asList(
-                    objectMapper.readValue(response.getBody(), LottoDTO[].class)
-            );
+            ultimiLotti = response.getBody();
             logger.info("✅ Lotti aggiornati correttamente: {}", ultimiLotti.size());
         } else {
             logger.error("❌ Errore nella chiamata API esterna: {}", response.getStatusCode());
