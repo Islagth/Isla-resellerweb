@@ -348,9 +348,6 @@ public List<DealDTO> recuperaTuttiDeal() {
     public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
         List<LeadRequest> modificati = new ArrayList<>();
 
-        List<Map<String, Object>> customFields = listaCustomFieldsDeal();
-        logger.info("Lista completa dei campi custom dei deal: {}", customFields);
-
         // ✅ Mappa veloce per convertire valore testuale in ResultCode
         Map<String, ResultCode> resultCodeMap = new HashMap<>();
         for (ResultCode rc : ResultCode.values()) {
@@ -358,18 +355,29 @@ public List<DealDTO> recuperaTuttiDeal() {
         }
 
         for (DealDTO deal : tuttiDeal) {
-
             Integer dealId = deal.getId();
             if (dealId == null) {
                 logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
                 continue;
             }
 
+            // --- LOG dei valori dei due campi custom ---
+            Object rawResultCode = deal.getRawData().get("UF_CRM_1761843804");
+            String resultCodeVal = (rawResultCode != null) ? rawResultCode.toString() : "N/A";
+
+            Object rawIdAnagrafica = deal.getRawData().get("UF_CRM_1762455213");
+            String idAnagraficaVal = (rawIdAnagrafica != null) ? rawIdAnagrafica.toString() : "N/A";
+
+            logger.info("Deal {} - UF_CRM_1761843804 (ResultCode): {}, UF_CRM_1762455213 (ID Anagrafica): {}",
+                    dealId, resultCodeVal, idAnagraficaVal);
+            // --- Fine log valori campi custom ---
+
+            logger.info("Deal raw data (ID={}): {}", dealId, deal.getRawData());
+
             // ✅ Leggi result code dal campo custom e mappa sull'enum
             ResultCode currentResultCode = ResultCode.UNKNOWN;
-            Object rawResult = deal.getRawData().get("UF_CRM_1761843804"); // campo custom ResultCode
-            if (rawResult != null && !rawResult.toString().isBlank()) {
-                String value = rawResult.toString().trim();
+            if (rawResultCode != null && !rawResultCode.toString().isBlank()) {
+                String value = rawResultCode.toString().trim();
                 currentResultCode = resultCodeMap.getOrDefault(value.toLowerCase(), ResultCode.UNKNOWN);
             }
             logger.info("Deal {} - resultCode rilevato: {}", dealId, currentResultCode);
@@ -399,10 +407,9 @@ public List<DealDTO> recuperaTuttiDeal() {
                 LeadRequest req = new LeadRequest();
 
                 // ✅ Leggi ID anagrafica dal campo custom
-                Object idAnagrafica = deal.getRawData().get("UF_CRM_1762455213"); // campo custom ID anagrafica
-                if (idAnagrafica != null && !idAnagrafica.toString().isBlank()) {
-                    req.setContactId(Long.valueOf(idAnagrafica.toString()));
-                    logger.info("Deal {} - contactId impostato da ID anagrafica: {}", dealId, idAnagrafica);
+                if (rawIdAnagrafica != null && !rawIdAnagrafica.toString().isBlank()) {
+                    req.setContactId(Long.valueOf(rawIdAnagrafica.toString()));
+                    logger.info("Deal {} - contactId impostato da ID anagrafica: {}", dealId, rawIdAnagrafica);
                 } else {
                     logger.warn("⚠️ Deal {} senza id anagrafica, imposto contactId = {}", dealId, contactId);
                     req.setContactId(contactId);
