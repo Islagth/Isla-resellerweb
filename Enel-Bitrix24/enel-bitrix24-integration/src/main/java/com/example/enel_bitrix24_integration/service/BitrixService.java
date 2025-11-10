@@ -67,7 +67,7 @@ public class BitrixService {
      * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
      */
     public LeadResponse invioLavorato(LeadRequest leadRequest) {
-        String url = baseUrl + "/partner-api/v5/workedcontact";
+         String url = "https://enel.in-voice.biz/partner-api/v5/workedcontact";
         logger.info("📤 Invio a Enel [{}]", url);
 
         // ======================
