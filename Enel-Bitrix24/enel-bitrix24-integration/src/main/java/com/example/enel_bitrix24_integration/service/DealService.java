@@ -348,6 +348,15 @@ public List<DealDTO> recuperaTuttiDeal() {
     public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
         List<LeadRequest> modificati = new ArrayList<>();
 
+        List<Map<String, Object>> customFields = listaCustomFieldsDeal();
+        for (Map<String, Object> field : customFields) {
+            String fieldName = (String) field.get("FIELD_NAME");           // Nome del campo custom, es: UF_CRM_1761843804
+            Object isSearchableObj = field.get("IS_SEARCHABLE");          // Valore del campo IS_SEARCHABLE
+            boolean isSearchable = "Y".equals(isSearchableObj);           // Converti in boolean true/false
+
+            logger.info("Campo: {}, IS_SEARCHABLE: {}", fieldName, isSearchable);
+        }
+
         // ✅ Mappa veloce per convertire valore testuale in ResultCode
         Map<String, ResultCode> resultCodeMap = new HashMap<>();
         for (ResultCode rc : ResultCode.values()) {
@@ -458,7 +467,6 @@ public List<DealDTO> recuperaTuttiDeal() {
         logger.info("✅ Totale LeadRequest creati: {}", modificati.size());
         return modificati;
     }
-
 
 
     
