@@ -348,9 +348,6 @@ public List<DealDTO> recuperaTuttiDeal() {
     public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
     List<LeadRequest> modificati = new ArrayList<>();
 
-    List<Map<String, Object>> customFields = listaCustomFieldsDeal();
-    logger.info("Lista completa dei campi custom dei deal caricata.");
-
     // ✅ Aggiorna IS_SEARCHABLE a true solo per i due campi interessati
     for (Map<String, Object> field : customFields) {
         String fieldName = (String) field.get("FIELD_NAME");
