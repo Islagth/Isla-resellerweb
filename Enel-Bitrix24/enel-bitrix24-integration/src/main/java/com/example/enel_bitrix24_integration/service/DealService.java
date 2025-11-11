@@ -360,8 +360,6 @@ public List<DealDTO> recuperaTuttiDeal() {
                 continue;
             }
 
-            logger.info("Deal raw data (ID={}): {}", dealId, deal.getRawData());
-
             // ✅ Recupera ResultCode da COMMENTS
             ResultCode currentResultCode = extractResultCode(deal.getComments(), resultCodeMap);
             logger.info("Deal {} - resultCode rilevato (da COMMENTS): {}", dealId, currentResultCode);
@@ -369,7 +367,7 @@ public List<DealDTO> recuperaTuttiDeal() {
             // ✅ Controlla se modificato rispetto alla cache
             String cachedResultCode = cacheResultCodeDeal.get(dealId);
             if (currentResultCode.name().equals(cachedResultCode)) {
-                logger.info("Deal {} - resultCode non modificato ({}), salto", dealId, currentResultCode);
+                logger.info("Deal {} - resultCode non modificato ({})", dealId, currentResultCode);
                 continue;
             }
 
