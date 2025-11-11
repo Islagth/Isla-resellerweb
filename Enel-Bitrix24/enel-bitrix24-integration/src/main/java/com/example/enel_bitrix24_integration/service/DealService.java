@@ -347,112 +347,110 @@ public List<DealDTO> recuperaTuttiDeal() {
 
 
     public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
-        List<LeadRequest> modificati = new ArrayList<>();
+    List<LeadRequest> modificati = new ArrayList<>();
 
-        // ✅ Mappa veloce per convertire valore testuale in ResultCode
-        Map<String, ResultCode> resultCodeMap = Arrays.stream(ResultCode.values())
-                .collect(Collectors.toMap(rc -> rc.getEsito().toLowerCase(), rc -> rc));
+    // ✅ Mappa veloce per convertire valore testuale in ResultCode
+    Map<String, ResultCode> resultCodeMap = Arrays.stream(ResultCode.values())
+            .collect(Collectors.toMap(rc -> rc.getEsito().toLowerCase(), rc -> rc));
 
-        for (DealDTO deal : tuttiDeal) {
-            Integer dealId = deal.getId();
-            if (dealId == null) {
-                logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
+    for (DealDTO deal : tuttiDeal) {
+        Integer dealId = deal.getId();
+        if (dealId == null) {
+            logger.warn("⚠️ Ignorato deal con ID null, titolo: {}", deal.getTitle());
+            continue;
+        }
+
+        // ✅ Recupera contatti del deal
+        List<Long> contattiDelDeal = getContattiDaDeal(dealId.longValue());
+        if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
+            logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
+            continue;
+        }
+
+        for (Long contactId : contattiDelDeal) {
+            ContactDTO contact = contactService.getContattoById(contactId.intValue());
+            if (contact == null) {
+                logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
                 continue;
             }
 
-            // ✅ Recupera ResultCode da COMMENTS
-            ResultCode currentResultCode = extractResultCode(deal.getComments(), resultCodeMap);
-            logger.info("Deal {} - resultCode rilevato (da COMMENTS): {}", dealId, currentResultCode);
+            // ✅ Recupera ResultCode da contact.getCOMMENTS()
+            ResultCode currentResultCode = extractResultCode(contact.getCOMMENTS(), resultCodeMap);
+            logger.info("Deal {} - contact {} - resultCode rilevato (da COMMENTS): {}", dealId, contactId, currentResultCode);
 
             // ✅ Controlla se modificato rispetto alla cache
             String cachedResultCode = cacheResultCodeDeal.get(dealId);
             if (currentResultCode.name().equals(cachedResultCode)) {
-                logger.info("Deal {} - resultCode non modificato ({})", dealId, currentResultCode);
+                logger.info("Deal {} - contact {} - resultCode non modificato ({})", dealId, contactId, currentResultCode);
                 continue;
             }
 
-            // ✅ Recupera contatti del deal
-            List<Long> contattiDelDeal = getContattiDaDeal(dealId.longValue());
-            if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
-                logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
-                continue;
-            }
+            LeadRequest req = new LeadRequest();
 
-            for (Long contactId : contattiDelDeal) {
-                ContactDTO contact = contactService.getContattoById(contactId.intValue());
-                if (contact == null) {
-                    logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
-                    continue;
-                }
+            // ✅ Recupera contactId da contact.getSOURCE_DESCRIPTION()
+            req.setContactId(extractContactId(contact.getSOURCE_DESCRIPTION(), contactId, dealId));
 
-                LeadRequest req = new LeadRequest();
+            req.setResultCode(currentResultCode);
+            req.setCaller("3932644963");
+            req.setWorkedCode(extractPhone(contact));
 
-                // ✅ Recupera contactId da SourceDescription
-                req.setContactId(extractContactId(deal.getSourceDescription(), contactId, dealId));
+            // ✅ Recupero ultima activity
+            setActivityDates(req, activityService.getUltimaActivityPerDeal(dealId));
 
-                req.setResultCode(currentResultCode);
-                req.setCaller("3932644963");
-                req.setWorkedCode(extractPhone(contact));
+            req.setWorkedType("O");
+            req.setCampaignId(65704L);
 
-                // ✅ Recupero ultima activity
-                setActivityDates(req, activityService.getUltimaActivityPerDeal(dealId));
+            modificati.add(req);
+            logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
 
-                req.setWorkedType("O");
-                req.setCampaignId(65704L);
-
-                modificati.add(req);
-                logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
-            }
-
-            // ✅ Aggiorna cache result code
+            // ✅ Aggiorna cache result code per deal
             cacheResultCodeDeal.put(dealId, currentResultCode.name());
-            logger.info("Deal {} - cache aggiornata con resultCode: {}", dealId, currentResultCode);
         }
-
-        logger.info("✅ Totale LeadRequest creati: {}", modificati.size());
-        return modificati;
     }
+
+    logger.info("✅ Totale LeadRequest creati: {}", modificati.size());
+    return modificati;
+}
 
 // --- Helper methods ---
 
-    private ResultCode extractResultCode(String comments, Map<String, ResultCode> resultCodeMap) {
-        if (comments == null || comments.isBlank()) return ResultCode.UNKNOWN;
-        return resultCodeMap.getOrDefault(comments.trim().toLowerCase(), ResultCode.UNKNOWN);
-    }
+private ResultCode extractResultCode(String comments, Map<String, ResultCode> resultCodeMap) {
+    if (comments == null || comments.isBlank()) return ResultCode.UNKNOWN;
+    return resultCodeMap.getOrDefault(comments.trim().toLowerCase(), ResultCode.UNKNOWN);
+}
 
-    private Long extractContactId(String sourceDescription, Long fallbackContactId, Integer dealId) {
-        if (sourceDescription != null && !sourceDescription.isBlank()) {
-            try {
-                return Long.valueOf(sourceDescription.trim());
-            } catch (NumberFormatException e) {
-                logger.warn("⚠️ Deal {} - SOURCE_DESCRIPTION non numerico ({}), uso fallback contactId = {}", dealId, sourceDescription, fallbackContactId);
-            }
-        } else {
-            logger.warn("⚠️ Deal {} senza SOURCE_DESCRIPTION, uso fallback contactId = {}", dealId, fallbackContactId);
+private Long extractContactId(String sourceDescription, Long fallbackContactId, Integer dealId) {
+    if (sourceDescription != null && !sourceDescription.isBlank()) {
+        try {
+            return Long.valueOf(sourceDescription.trim());
+        } catch (NumberFormatException e) {
+            logger.warn("⚠️ Deal {} - SOURCE_DESCRIPTION non numerico ({}), uso fallback contactId = {}", dealId, sourceDescription, fallbackContactId);
         }
-        return fallbackContactId;
+    } else {
+        logger.warn("⚠️ Deal {} senza SOURCE_DESCRIPTION, uso fallback contactId = {}", dealId, fallbackContactId);
     }
+    return fallbackContactId;
+}
 
-    private String extractPhone(ContactDTO contact) {
-        if (contact.getPHONE() != null && !contact.getPHONE().isEmpty()) {
-            return contact.getPHONE().get(0).getVALUE();
-        }
-        return "+0000000000";
+private String extractPhone(ContactDTO contact) {
+    if (contact.getPHONE() != null && !contact.getPHONE().isEmpty()) {
+        return contact.getPHONE().get(0).getVALUE();
     }
+    return "+0000000000";
+}
 
-    private void setActivityDates(LeadRequest req, ActivityDTO activity) {
-        LocalDateTime now = LocalDateTime.now();
-        if (activity != null && activity.getStartTime() != null) {
-            req.setWorked_Date(activity.getStartTime());
-            req.setWorked_End_Date(activity.getEndTime() != null
-                    ? activity.getEndTime()
-                    : activity.getStartTime().plusMinutes(2));
-        } else {
-            req.setWorked_Date(now);
-            req.setWorked_End_Date(now.plusMinutes(2));
-        }
+private void setActivityDates(LeadRequest req, ActivityDTO activity) {
+    LocalDateTime now = LocalDateTime.now();
+    if (activity != null && activity.getStartTime() != null) {
+        req.setWorked_Date(activity.getStartTime());
+        req.setWorked_End_Date(activity.getEndTime() != null
+                ? activity.getEndTime()
+                : activity.getStartTime().plusMinutes(2));
+    } else {
+        req.setWorked_Date(now);
+        req.setWorked_End_Date(now.plusMinutes(2));
     }
-
+}
 
     
     private Integer extractNextStartFromLastResponse() {
