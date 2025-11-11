@@ -346,12 +346,18 @@ public List<DealDTO> recuperaTuttiDeal() {
     }
 
 
-  public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
+ public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
     List<LeadRequest> modificati = new ArrayList<>();
 
     // ✅ Mappa veloce per convertire valore testuale in ResultCode
     Map<String, ResultCode> resultCodeMap = Arrays.stream(ResultCode.values())
             .collect(Collectors.toMap(rc -> rc.getEsito().toLowerCase(), rc -> rc));
+
+    // Stampa tutti i ResultCode disponibili
+    logger.info("Lista ResultCode disponibili:");
+    for (ResultCode rc : ResultCode.values()) {
+        logger.info(" - {} -> esito='{}'", rc.name(), rc.getEsito());
+    }
 
     for (DealDTO deal : tuttiDeal) {
         Integer dealId = deal.getId();
@@ -360,7 +366,6 @@ public List<DealDTO> recuperaTuttiDeal() {
             continue;
         }
 
-        // ✅ Recupera contatti del deal (qui assume 1 contatto per deal)
         List<Long> contattiDelDeal = getContattiDaDeal(dealId.longValue());
         if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
             logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
@@ -374,40 +379,40 @@ public List<DealDTO> recuperaTuttiDeal() {
             continue;
         }
 
-        // ✅ Recupera ResultCode da contact.getCOMMENTS() usando match "contains"
-        ResultCode currentResultCode = mapResultCodeFromComments(contact.getCOMMENTS(), resultCodeMap);
-        logger.info("Deal {} - contact {} - COMMENTS='{}', mapped ResultCode={}", dealId, contactId, contact.getCOMMENTS(), currentResultCode);
+        // 🔹 Log diagnostico completo
+        String comments = contact.getCOMMENTS();
+        String sourceDescription = contact.getSOURCE_DESCRIPTION();
+        logger.info("Deal {} - contact {} - COMMENTS='{}' - SOURCE_DESCRIPTION='{}'", 
+                    dealId, contactId, comments, sourceDescription);
 
-        // ✅ Controlla se modificato rispetto alla cache
-        String cachedResultCode = cacheResultCodeDeal.get(dealId);
-        if (currentResultCode.name().equals(cachedResultCode)) {
-            logger.info("Deal {} - contact {} - resultCode non modificato ({})", dealId, contactId, currentResultCode);
-            continue;
+        // 🔹 Test mapping ResultCode
+        ResultCode mapped = ResultCode.UNKNOWN;
+        if (comments != null && !comments.isBlank()) {
+            String c = comments.trim().toLowerCase();
+            for (ResultCode rc : ResultCode.values()) {
+                if (c.contains(rc.getEsito().toLowerCase())) {
+                    mapped = rc;
+                    break;
+                }
+            }
         }
+        logger.info("Deal {} - contact {} - Mapped ResultCode = {}", dealId, contactId, mapped);
 
-        LeadRequest req = new LeadRequest();
+        // 🔹 Test conversione SOURCE_DESCRIPTION in Long
+        Long extractedId = null;
+        try {
+            extractedId = (sourceDescription != null && !sourceDescription.isBlank())
+                    ? Long.valueOf(sourceDescription.trim())
+                    : null;
+        } catch (NumberFormatException e) {
+            logger.warn("⚠️ Deal {} - SOURCE_DESCRIPTION non numerico: '{}'", dealId, sourceDescription);
+        }
+        logger.info("Deal {} - contact {} - Extracted contactId = {}", dealId, contactId, 
+                    (extractedId != null ? extractedId : contactId));
 
-        // ✅ Recupera contactId da contact.getSOURCE_DESCRIPTION()
-        req.setContactId(extractContactId(contact.getSOURCE_DESCRIPTION(), contactId, dealId));
-
-        req.setResultCode(currentResultCode);
-        req.setCaller("3932644963");
-        req.setWorkedCode(extractPhone(contact));
-
-        // ✅ Recupero ultima activity
-        setActivityDates(req, activityService.getUltimaActivityPerDeal(dealId));
-
-        req.setWorkedType("O");
-        req.setCampaignId(65704L);
-
-        modificati.add(req);
-        logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
-
-        // ✅ Aggiorna cache result code per deal
-        cacheResultCodeDeal.put(dealId, currentResultCode.name());
+        // ✅ Non facciamo altro, solo logging diagnostico
     }
 
-    logger.info("✅ Totale LeadRequest creati: {}", modificati.size());
     return modificati;
 }
 
