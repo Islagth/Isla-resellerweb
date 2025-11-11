@@ -346,7 +346,7 @@ public List<DealDTO> recuperaTuttiDeal() {
     }
 
 
-    public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
+  public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
     List<LeadRequest> modificati = new ArrayList<>();
 
     // ✅ Mappa veloce per convertire valore testuale in ResultCode
@@ -360,52 +360,51 @@ public List<DealDTO> recuperaTuttiDeal() {
             continue;
         }
 
-        // ✅ Recupera contatti del deal
+        // ✅ Recupera contatti del deal (qui assume 1 contatto per deal)
         List<Long> contattiDelDeal = getContattiDaDeal(dealId.longValue());
         if (contattiDelDeal == null || contattiDelDeal.isEmpty()) {
             logger.warn("⚠️ Nessun contatto trovato per deal {}", dealId);
             continue;
         }
 
-        for (Long contactId : contattiDelDeal) {
-            ContactDTO contact = contactService.getContattoById(contactId.intValue());
-            if (contact == null) {
-                logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
-                continue;
-            }
-
-            // ✅ Recupera ResultCode da contact.getCOMMENTS()
-            ResultCode currentResultCode = extractResultCode(contact.getCOMMENTS(), resultCodeMap);
-            logger.info("Deal {} - contact {} - resultCode rilevato (da COMMENTS): {}", dealId, contactId, currentResultCode);
-
-            // ✅ Controlla se modificato rispetto alla cache
-            String cachedResultCode = cacheResultCodeDeal.get(dealId);
-            if (currentResultCode.name().equals(cachedResultCode)) {
-                logger.info("Deal {} - contact {} - resultCode non modificato ({})", dealId, contactId, currentResultCode);
-                continue;
-            }
-
-            LeadRequest req = new LeadRequest();
-
-            // ✅ Recupera contactId da contact.getSOURCE_DESCRIPTION()
-            req.setContactId(extractContactId(contact.getSOURCE_DESCRIPTION(), contactId, dealId));
-
-            req.setResultCode(currentResultCode);
-            req.setCaller("3932644963");
-            req.setWorkedCode(extractPhone(contact));
-
-            // ✅ Recupero ultima activity
-            setActivityDates(req, activityService.getUltimaActivityPerDeal(dealId));
-
-            req.setWorkedType("O");
-            req.setCampaignId(65704L);
-
-            modificati.add(req);
-            logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
-
-            // ✅ Aggiorna cache result code per deal
-            cacheResultCodeDeal.put(dealId, currentResultCode.name());
+        Long contactId = contattiDelDeal.get(0);
+        ContactDTO contact = contactService.getContattoById(contactId.intValue());
+        if (contact == null) {
+            logger.warn("⚠️ Contatto {} non trovato per deal {}", contactId, dealId);
+            continue;
         }
+
+        // ✅ Recupera ResultCode da contact.getCOMMENTS() usando match "contains"
+        ResultCode currentResultCode = mapResultCodeFromComments(contact.getCOMMENTS(), resultCodeMap);
+        logger.info("Deal {} - contact {} - COMMENTS='{}', mapped ResultCode={}", dealId, contactId, contact.getCOMMENTS(), currentResultCode);
+
+        // ✅ Controlla se modificato rispetto alla cache
+        String cachedResultCode = cacheResultCodeDeal.get(dealId);
+        if (currentResultCode.name().equals(cachedResultCode)) {
+            logger.info("Deal {} - contact {} - resultCode non modificato ({})", dealId, contactId, currentResultCode);
+            continue;
+        }
+
+        LeadRequest req = new LeadRequest();
+
+        // ✅ Recupera contactId da contact.getSOURCE_DESCRIPTION()
+        req.setContactId(extractContactId(contact.getSOURCE_DESCRIPTION(), contactId, dealId));
+
+        req.setResultCode(currentResultCode);
+        req.setCaller("3932644963");
+        req.setWorkedCode(extractPhone(contact));
+
+        // ✅ Recupero ultima activity
+        setActivityDates(req, activityService.getUltimaActivityPerDeal(dealId));
+
+        req.setWorkedType("O");
+        req.setCampaignId(65704L);
+
+        modificati.add(req);
+        logger.info("✅ Creato LeadRequest per contactId {}: {}", contactId, req);
+
+        // ✅ Aggiorna cache result code per deal
+        cacheResultCodeDeal.put(dealId, currentResultCode.name());
     }
 
     logger.info("✅ Totale LeadRequest creati: {}", modificati.size());
@@ -414,9 +413,18 @@ public List<DealDTO> recuperaTuttiDeal() {
 
 // --- Helper methods ---
 
-private ResultCode extractResultCode(String comments, Map<String, ResultCode> resultCodeMap) {
+/**
+ * Mappa COMMENTS di un contatto a ResultCode usando "contains" per supportare testo extra
+ */
+private ResultCode mapResultCodeFromComments(String comments, Map<String, ResultCode> resultCodeMap) {
     if (comments == null || comments.isBlank()) return ResultCode.UNKNOWN;
-    return resultCodeMap.getOrDefault(comments.trim().toLowerCase(), ResultCode.UNKNOWN);
+    String c = comments.trim().toLowerCase();
+    for (Map.Entry<String, ResultCode> entry : resultCodeMap.entrySet()) {
+        if (c.contains(entry.getKey())) {
+            return entry.getValue();
+        }
+    }
+    return ResultCode.UNKNOWN;
 }
 
 private Long extractContactId(String sourceDescription, Long fallbackContactId, Integer dealId) {
@@ -451,6 +459,7 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         req.setWorked_End_Date(now.plusMinutes(2));
     }
 }
+
 
     
     private Integer extractNextStartFromLastResponse() {
