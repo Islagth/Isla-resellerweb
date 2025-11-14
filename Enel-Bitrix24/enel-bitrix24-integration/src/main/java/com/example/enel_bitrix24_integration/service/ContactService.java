@@ -115,14 +115,20 @@ public class ContactService {
     }
 
     // ----------------- GET CONTATTO PER ID -----------------
-   public ContactDTO getContattoById(int contactId) throws Exception {
+  public ContactDTO getContattoById(int contactId) throws Exception {
         logger.info("Recupero contatto per ID: {}", contactId);
-        String url = baseUrl + "/rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
+        String url = baseUrl + "rest/9/03w7isr7xmjog2c6/crm.contact.get.json";
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("ID", contactId);
 
         Map<String, Object> result = postForResultMap(url, payload, "recupero contatto");
+
+        // 🔥 LOG RAW JSON - QUI! PRIMA DI MAPTOCONTACTDTO
+        if (result != null) {
+            logger.warn("RAW CONTACT JSON = {}",
+                    new ObjectMapper().writeValueAsString(result));
+        }
 
         if (result == null || !result.containsKey("result")) {
             logger.warn("⚠️ Nessun contatto trovato per ID {}", contactId);
