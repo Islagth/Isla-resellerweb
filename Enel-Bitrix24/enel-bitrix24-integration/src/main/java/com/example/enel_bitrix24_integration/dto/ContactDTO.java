@@ -14,36 +14,97 @@ import java.util.Map;
 public class ContactDTO {
 
     // --- Campi Bitrix24 ---
+    @JsonProperty("HONORIFIC")
     private String HONORIFIC;
+
+    @JsonProperty("NAME")
     private String NAME;
+
+    @JsonProperty("SECOND_NAME")
     private String SECOND_NAME;
+
+    @JsonProperty("LAST_NAME")
     private String LAST_NAME;
+
+    @JsonProperty("BIRTHDATE")
     private String BIRTHDATE;
+
+    @JsonProperty("TYPE_ID")
     private String TYPE_ID;
+
+    @JsonProperty("SOURCE_ID")
     private String SOURCE_ID;
+
+    @JsonProperty("SOURCE_DESCRIPTION")
     private String SOURCE_DESCRIPTION;
+
+    @JsonProperty("POST")
     private String POST;
+
+    @JsonProperty("COMMENTS")
     private String COMMENTS;
+
+    @JsonProperty("OPENED")
     private String OPENED;
+
+    @JsonProperty("EXPORT")
     private String EXPORT;
+
+    @JsonProperty("ASSIGNED_BY_ID")
     private Integer ASSIGNED_BY_ID;
+
+    @JsonProperty("COMPANY_ID")
     private Integer COMPANY_ID;
+
+    @JsonProperty("COMPANY_IDS")
     private List<Integer> COMPANY_IDS;
+
+    @JsonProperty("UTM_SOURCE")
     private String UTM_SOURCE;
+
+    @JsonProperty("UTM_MEDIUM")
     private String UTM_MEDIUM;
+
+    @JsonProperty("UTM_CAMPAIGN")
     private String UTM_CAMPAIGN;
+
+    @JsonProperty("UTM_CONTENT")
     private String UTM_CONTENT;
+
+    @JsonProperty("UTM_TERM")
     private String UTM_TERM;
+
+    @JsonProperty("PHONE")
     private List<MultiField> PHONE;
+
+    @JsonProperty("EMAIL")
     private List<MultiField> EMAIL;
+
+    @JsonProperty("WEB")
     private List<MultiField> WEB;
+
+    @JsonProperty("IM")
     private List<MultiField> IM;
+
+    @JsonProperty("LINK")
     private List<MultiField> LINK;
+
+    @JsonProperty("UF")
     private Map<String, Object> UF;
+
+    @JsonProperty("RESULT_CODE")
     private ResultCode RESULT_CODE;
+
+    @JsonProperty("DATE_CREATE")
     private LocalDateTime DATE_CREATE;
+
+    @JsonProperty("DATE_MODIFY")
     private LocalDateTime DATE_MODIFY;
+
+    @JsonProperty("CREATED_BY_ID")
     private Integer CREATED_BY_ID;
+
+    @JsonProperty("MODIFY_BY_ID")
     private Integer MODIFY_BY_ID;
 
     // --- Campi custom JSON del lotto ---
