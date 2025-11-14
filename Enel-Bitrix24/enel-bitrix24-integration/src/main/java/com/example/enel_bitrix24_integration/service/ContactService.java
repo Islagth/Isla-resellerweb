@@ -147,6 +147,9 @@ public class ContactService {
 
     dto.setNAME((String) item.get("NAME"));
     dto.setLAST_NAME((String) item.get("LAST_NAME"));
+     dto.setCOMMENTS((String) item.get("COMMENTS"));
+    dto.setSOURCE_DESCRIPTION((String) item.get("SOURCE_DESCRIPTION"));
+  
 
     // PHONE
     if (item.get("PHONE") instanceof List<?> phoneList) {
