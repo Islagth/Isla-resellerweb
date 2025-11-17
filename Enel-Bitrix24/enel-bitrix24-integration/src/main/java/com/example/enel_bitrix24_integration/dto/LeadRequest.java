@@ -14,10 +14,10 @@ public class LeadRequest {
     @JsonProperty("workedCode")
     private String workedCode;
 
-     @JsonProperty("worked_Date")
+      @JsonProperty("worked_date")
     private String workedDate;
 
-    @JsonProperty("worked_End_Date")
+    @JsonProperty("worked_end_date")
     private String workedEndDate;
 
     @JsonProperty("resultCode")
