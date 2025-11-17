@@ -457,8 +457,8 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
             end = activity.getEndTime() != null ? activity.getEndTime() : start.plusMinutes(2);
         }
 
-        req.setWorked_Date(LocalDateTime.parse(start.format(formatter)));
-        req.setWorked_End_Date(LocalDateTime.parse(end.format(formatter)));
+        req.setWorked_Date(start);
+        req.setWorked_End_Date(end);
     }
 
 
