@@ -242,14 +242,14 @@ public class ActivityService {
         if (dateString == null || dateString.trim().isEmpty()) return null;
 
         List<DateTimeFormatter> formatters = List.of(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"),
                 DateTimeFormatter.ISO_DATE_TIME
         );
 
         for (DateTimeFormatter fmt : formatters) {
             try {
                 LocalDateTime dt = LocalDateTime.parse(dateString.trim(), fmt);
-                return dt.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
+                return dt.format(DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"));
             } catch (DateTimeParseException ignored) {}
         }
 
@@ -317,6 +317,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
