@@ -399,8 +399,8 @@ public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws
 
         modificati.add(req);
 
-        logger.info("Deal {} - contact {} - LeadRequest pronto per invio: resultCode={}, phone={}, dates {}->{}",
-                dealId, finalContactId, mapped, req.getWorked_Date(), req.getWorked_End_Date());
+         logger.info("Deal {} - contact {} - LeadRequest pronto per invio: resultCode={}, dates {}->{}",
+                    dealId, finalContactId, mapped, req.getWorkedDate(), req.getWorkedEndDate());
     }
 
     logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
@@ -472,8 +472,8 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
             }
         }
 
-        req.setWorked_Date(start.format(formatter));
-        req.setWorked_End_Date(end.format(formatter));
+        req.setWorkedDate(start.format(formatter));
+        req.setWorkedEndDate(end.format(formatter));
     }
 
     private LocalDateTime parseDateSafely(String dateString) {
