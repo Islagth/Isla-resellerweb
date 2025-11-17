@@ -447,7 +447,7 @@ private String extractPhone(ContactDTO contact) {
 
 private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"); // formato Enel
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"); // formato Enel
 
         LocalDateTime start = now;
         LocalDateTime end = now.plusMinutes(2);
@@ -457,10 +457,9 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
             end = activity.getEndTime() != null ? activity.getEndTime() : start.plusMinutes(2);
         }
 
-        req.setWorked_Date(start);
-        req.setWorked_End_Date(end);
+        req.setWorked_Date(start.format(formatter));
+        req.setWorked_End_Date(end.format(formatter));
     }
-
 
     
     private Integer extractNextStartFromLastResponse() {
