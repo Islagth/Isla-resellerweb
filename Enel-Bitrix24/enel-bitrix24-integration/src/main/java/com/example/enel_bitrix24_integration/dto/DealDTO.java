@@ -11,7 +11,8 @@ public class DealDTO {
 
     // === Identificativi ===
     private Integer id;                 // ID Bitrix (opzionale per update)
-    private String idAnagrafica;        // ID anagrafica per collegamento con contatto
+    @JsonProperty("ID_ANAGRAFICA")
+    private String idAnagrafica;      // ID anagrafica per collegamento con contatto
 
     // === Campi principali ===
     private String title;               // TITLE
