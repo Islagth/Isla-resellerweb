@@ -44,20 +44,20 @@ public class LeadRequest {
         this.workedCode = workedCode;
     }
 
-   public String getWorked_Date() {
+  public String getWorkedDate() {
         return workedDate;
     }
 
-    public void setWorked_Date(String worked_Date) {
-        this.workedDate = worked_Date;
+    public void setWorkedDate(String workedDate) {
+        this.workedDate = workedDate;
     }
 
-    public String getWorked_End_Date() {
+    public String getWorkedEndDate() {
         return workedEndDate;
     }
 
-    public void setWorked_End_Date(String worked_End_Date) {
-        this.workedEndDate = worked_End_Date;
+    public void setWorkedEndDate(String workedEndDate) {
+        this.workedEndDate = workedEndDate;
     }
 
     public ResultCode getResultCode() {
