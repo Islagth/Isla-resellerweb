@@ -349,11 +349,11 @@ public List<DealDTO> recuperaTuttiDeal() {
  public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
     List<LeadRequest> modificati = new ArrayList<>();
 
-    // ✅ Mappa veloce per convertire valore testuale in ResultCode
+    // Mappa veloce per convertire valore testuale in ResultCode
     Map<String, ResultCode> resultCodeMap = Arrays.stream(ResultCode.values())
             .collect(Collectors.toMap(rc -> rc.getEsito().toLowerCase(), rc -> rc));
 
-    // Stampa tutti i ResultCode disponibili
+    // Log dei ResultCode disponibili
     logger.info("Lista ResultCode disponibili:");
     for (ResultCode rc : ResultCode.values()) {
         logger.info(" - {} -> esito='{}'", rc.name(), rc.getEsito());
@@ -379,13 +379,13 @@ public List<DealDTO> recuperaTuttiDeal() {
             continue;
         }
 
-        // 🔹 Log diagnostico completo
+        // Log diagnostico
         String comments = contact.getCOMMENTS();
         String sourceDescription = contact.getSOURCE_DESCRIPTION();
-        logger.info("Deal {} - contact {} - COMMENTS='{}' - SOURCE_DESCRIPTION='{}'", 
-                    dealId, contactId, comments, sourceDescription);
+        logger.info("Deal {} - contact {} - COMMENTS='{}' - SOURCE_DESCRIPTION='{}'",
+                dealId, contactId, comments, sourceDescription);
 
-        // 🔹 Test mapping ResultCode
+        // Mapping ResultCode
         ResultCode mapped = ResultCode.UNKNOWN;
         if (comments != null && !comments.isBlank()) {
             String c = comments.trim().toLowerCase();
@@ -398,7 +398,7 @@ public List<DealDTO> recuperaTuttiDeal() {
         }
         logger.info("Deal {} - contact {} - Mapped ResultCode = {}", dealId, contactId, mapped);
 
-        // 🔹 Test conversione SOURCE_DESCRIPTION in Long
+        // Conversione SOURCE_DESCRIPTION in Long
         Long extractedId = null;
         try {
             extractedId = (sourceDescription != null && !sourceDescription.isBlank())
@@ -407,14 +407,20 @@ public List<DealDTO> recuperaTuttiDeal() {
         } catch (NumberFormatException e) {
             logger.warn("⚠️ Deal {} - SOURCE_DESCRIPTION non numerico: '{}'", dealId, sourceDescription);
         }
-        logger.info("Deal {} - contact {} - Extracted contactId = {}", dealId, contactId, 
-                    (extractedId != null ? extractedId : contactId));
+        Long finalContactId = (extractedId != null ? extractedId : contactId);
+        logger.info("Deal {} - contact {} - Extracted contactId = {}", dealId, contactId, finalContactId);
 
-        // ✅ Non facciamo altro, solo logging diagnostico
+        // ✅ Creazione LeadRequest e aggiunta alla lista
+        LeadRequest lr = new LeadRequest();
+        lr.setContactId(finalContactId);
+        lr.setResultCode(mapped);
+        modificati.add(lr);
     }
 
+    logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
     return modificati;
 }
+
 
 // --- Helper methods ---
 
