@@ -447,7 +447,7 @@ private String extractPhone(ContactDTO contact) {
 
 private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"); // formato Enel
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"); // formato Enel
 
         LocalDateTime start = now;
         LocalDateTime end = now.plusMinutes(2);
