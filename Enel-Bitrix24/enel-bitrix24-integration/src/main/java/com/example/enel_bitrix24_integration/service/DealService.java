@@ -445,9 +445,9 @@ private String extractPhone(ContactDTO contact) {
     return "+0000000000";
 }
 
- private void setActivityDates(LeadRequest req, ActivityDTO activity) {
+private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"); // formato Enel CORRETTO
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"); // formato Enel CORRETTO
 
 
         LocalDateTime start = now;
@@ -480,8 +480,8 @@ private String extractPhone(ContactDTO contact) {
         if (dateString == null || dateString.trim().isEmpty()) return null;
 
         List<DateTimeFormatter> formatters = List.of(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),   // già presente
-                DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),   // ⬅️ AGGIUNGERE QUI
+                DateTimeFormatter.ofPattern("yyyy-dd-MM HH:mm:ss"),   // già presente
+                DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"),   // ⬅️ AGGIUNGERE QUI
                 DateTimeFormatter.ISO_DATE_TIME                       // già presente
         );
 
