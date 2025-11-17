@@ -108,16 +108,16 @@ public class ContactDTO {
     private Integer MODIFY_BY_ID;
 
     // --- Campi custom JSON del lotto ---
-    @JsonProperty("idAnagrafica")
+    @JsonProperty("ID_ANAGRAFICA")
     private Long idAnagrafica;
-    
-    @JsonProperty("telefono")
+
+    @JsonProperty("TELEFONO")
     private String telefono;
-    
-    @JsonProperty("externalId")
+
+    @JsonProperty("EXTERNAL_ID")
     private String externalId;
-    
-    @JsonProperty("dataScadenza")
+
+    @JsonProperty("DATA_SCADENZA")
     private String dataScadenza;
 
 
