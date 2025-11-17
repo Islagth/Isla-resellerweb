@@ -445,21 +445,57 @@ private String extractPhone(ContactDTO contact) {
     return "+0000000000";
 }
 
-private void setActivityDates(LeadRequest req, ActivityDTO activity) {
+ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"); // formato Enel
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"); // formato Enel CORRETTO
+
 
         LocalDateTime start = now;
         LocalDateTime end = now.plusMinutes(2);
 
         if (activity != null && activity.getStartTime() != null) {
-            start = LocalDateTime.parse(activity.getStartTime());
-            end = activity.getEndTime() != null ? LocalDateTime.parse(activity.getEndTime()) : start.plusMinutes(2);
+
+            LocalDateTime parsedStart = parseDateSafely(activity.getStartTime());
+            if (parsedStart != null) {
+                start = parsedStart;
+            }
+
+            if (activity.getEndTime() != null) {
+                LocalDateTime parsedEnd = parseDateSafely(activity.getEndTime());
+                if (parsedEnd != null) {
+                    end = parsedEnd;
+                } else {
+                    end = start.plusMinutes(2);
+                }
+            } else {
+                end = start.plusMinutes(2);
+            }
         }
 
         req.setWorked_Date(start.format(formatter));
         req.setWorked_End_Date(end.format(formatter));
     }
+
+    private LocalDateTime parseDateSafely(String dateString) {
+        if (dateString == null || dateString.trim().isEmpty()) return null;
+
+        List<DateTimeFormatter> formatters = List.of(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),   // già presente
+                DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),   // ⬅️ AGGIUNGERE QUI
+                DateTimeFormatter.ISO_DATE_TIME                       // già presente
+        );
+
+        for (DateTimeFormatter fmt : formatters) {
+            try {
+                return LocalDateTime.parse(dateString.trim(), fmt);
+            } catch (DateTimeParseException ignored) {}
+        }
+
+        logger.warn("⚠️ Formato data non riconosciuto da Bitrix24: '{}'", dateString);
+        return null;
+    }
+
+
 
 
     
