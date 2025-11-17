@@ -238,7 +238,7 @@ public class ActivityService {
      * 🔧 Metodo helper per parsare date in modo sicuro da Bitrix24.
      * Gestisce sia formati "yyyy-MM-dd HH:mm:ss" che ISO (es. 2025-11-04T15:31:20Z)
      */
-    private LocalDateTime parseDateSafely(String dateString) {
+      private String parseDateSafely(String dateString) {
         if (dateString == null || dateString.trim().isEmpty()) return null;
 
         List<DateTimeFormatter> formatters = List.of(
@@ -248,7 +248,8 @@ public class ActivityService {
 
         for (DateTimeFormatter fmt : formatters) {
             try {
-                return LocalDateTime.parse(dateString.trim(), fmt);
+                LocalDateTime dt = LocalDateTime.parse(dateString.trim(), fmt);
+                return dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             } catch (DateTimeParseException ignored) {}
         }
 
@@ -316,6 +317,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
