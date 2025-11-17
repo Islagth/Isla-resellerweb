@@ -15,11 +15,11 @@ public class LeadRequest {
     private String workedCode;
 
     @JsonProperty("worked_Date")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime workedDate;
 
     @JsonProperty("worked_End_Date")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime workedEndDate;
 
     @JsonProperty("resultCode")
