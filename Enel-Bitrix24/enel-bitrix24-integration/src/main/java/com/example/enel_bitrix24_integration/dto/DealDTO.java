@@ -1,7 +1,7 @@
 package com.example.enel_bitrix24_integration.dto;
 
 import lombok.Data;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
