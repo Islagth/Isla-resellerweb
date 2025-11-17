@@ -76,25 +76,35 @@ public class ContactService {
     }
 
     public Integer addContact(ContactDTO dto, Map<String, Object> params) throws Exception {
-        logger.info("Avvio creazione contatto: {} {}", dto.getIdAnagrafica(), dto.getTelefono());
+    logger.info("Avvio creazione contatto: {} {}", dto.getIdAnagrafica(), dto.getTelefono());
 
-        Map<String, Object> fields = new HashMap<>();
-        fields.put("NAME", dto.getIdAnagrafica());
-        fields.put("PHONE", List.of(Map.of("VALUE", dto.getTelefono(), "VALUE_TYPE", "WORK")));
+    Map<String, Object> fields = new HashMap<>();
+    fields.put("NAME", dto.getIdAnagrafica());
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("fields", fields);
-
-        String url = webHookUrl + "/crm.contact.add";
-        logger.info("Invio POST per creazione contatto a URL: {}", url);
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, requestBody, Map.class);
-        if (response.getBody() != null && response.getBody().get("result") != null) {
-            return (Integer) response.getBody().get("result");
-        } else {
-            throw new RuntimeException("Risposta Bitrix non valida durante la creazione del contatto");
-        }
+    if (dto.getTelefono() != null && !dto.getTelefono().isBlank()) {
+        Map<String, Object> phoneEntry = new HashMap<>();
+        phoneEntry.put("VALUE", dto.getTelefono());
+        phoneEntry.put("VALUE_TYPE", "WORK");
+        fields.put("PHONE", List.of(phoneEntry));
+    } else {
+        logger.warn("Telefono nullo per contatto {} – non verrà inviato il campo PHONE", dto.getIdAnagrafica());
     }
+
+    Map<String, Object> requestBody = new HashMap<>();
+    requestBody.put("fields", fields);
+
+    String url = webHookUrl + "/rest/9/txk5orlo651kxu97/crm.contact.add";
+    logger.info("Invio POST per creazione contatto a URL: {}", url);
+
+    ResponseEntity<Map> response = restTemplate.postForEntity(url, requestBody, Map.class);
+
+    if (response.getBody() != null && response.getBody().get("result") != null) {
+        return (Integer) response.getBody().get("result");
+    }
+
+    throw new RuntimeException("Risposta Bitrix non valida durante la creazione del contatto");
+}
+
 
 
     // ----------------- AGGIORNAMENTO CONTATTO -----------------
