@@ -453,13 +453,14 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         LocalDateTime end = now.plusMinutes(2);
 
         if (activity != null && activity.getStartTime() != null) {
-            start = activity.getStartTime();
-            end = activity.getEndTime() != null ? activity.getEndTime() : start.plusMinutes(2);
+            start = LocalDateTime.parse(activity.getStartTime());
+            end = activity.getEndTime() != null ? LocalDateTime.parse(activity.getEndTime()) : start.plusMinutes(2);
         }
 
         req.setWorked_Date(start.format(formatter));
         req.setWorked_End_Date(end.format(formatter));
     }
+
 
     
     private Integer extractNextStartFromLastResponse() {
