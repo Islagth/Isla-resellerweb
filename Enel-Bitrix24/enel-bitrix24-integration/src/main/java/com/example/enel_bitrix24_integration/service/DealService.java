@@ -446,17 +446,20 @@ private String extractPhone(ContactDTO contact) {
 }
 
 private void setActivityDates(LeadRequest req, ActivityDTO activity) {
-    LocalDateTime now = LocalDateTime.now();
-    if (activity != null && activity.getStartTime() != null) {
-        req.setWorked_Date(activity.getStartTime());
-        req.setWorked_End_Date(activity.getEndTime() != null
-                ? activity.getEndTime()
-                : activity.getStartTime().plusMinutes(2));
-    } else {
-        req.setWorked_Date(now);
-        req.setWorked_End_Date(now.plusMinutes(2));
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"); // formato Enel
+
+        LocalDateTime start = now;
+        LocalDateTime end = now.plusMinutes(2);
+
+        if (activity != null && activity.getStartTime() != null) {
+            start = activity.getStartTime();
+            end = activity.getEndTime() != null ? activity.getEndTime() : start.plusMinutes(2);
+        }
+
+        req.setWorked_Date(LocalDateTime.parse(start.format(formatter)));
+        req.setWorked_End_Date(LocalDateTime.parse(end.format(formatter)));
     }
-}
 
 
     
