@@ -249,7 +249,7 @@ public class ActivityService {
         for (DateTimeFormatter fmt : formatters) {
             try {
                 LocalDateTime dt = LocalDateTime.parse(dateString.trim(), fmt);
-                return dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                return dt.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
             } catch (DateTimeParseException ignored) {}
         }
 
@@ -317,6 +317,7 @@ public class ActivityService {
 
 
 }
+
 
 
 
