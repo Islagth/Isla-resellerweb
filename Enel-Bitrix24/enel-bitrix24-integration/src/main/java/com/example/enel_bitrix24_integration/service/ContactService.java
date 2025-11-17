@@ -480,8 +480,8 @@ public class ContactService {
                         req.setWorked_Date(ultimaActivity.getStartTime());
                         req.setWorked_End_Date(ultimaActivity.getEndTime());
                     } else {
-                        req.setWorked_Date(LocalDateTime.now());
-                        req.setWorked_End_Date(LocalDateTime.now().plusMinutes(2));
+                        req.setWorked_Date(String.valueOf(LocalDateTime.now()));
+                        req.setWorked_End_Date(String.valueOf(LocalDateTime.now().plusMinutes(2)));
                     }
 
                     modificati.add(req);
