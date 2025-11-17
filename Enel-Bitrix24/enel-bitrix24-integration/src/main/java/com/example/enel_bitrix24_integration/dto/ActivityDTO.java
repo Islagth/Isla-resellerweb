@@ -4,21 +4,22 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 
+
 public class ActivityDTO {
     private Long id;
     private Long ownerId;           // ID del deal o contatto
     private Integer ownerTypeId;    // Tipo oggetto CRM (2 = Deal)
     private String typeId;          // Tipo attività (CALL, MEETING, TASK, ecc.)
     private String description;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private String startTime;
+    private String endTime;
     private LocalDateTime deadline;
-    private LocalDateTime dateModify;
+    private String dateModify;
     private String subject;
     private String status;
     private Long responsibleId;
 
-     public Long getId() {
+    public Long getId() {
         return id;
     }
 
@@ -58,27 +59,27 @@ public class ActivityDTO {
         this.description = description;
     }
 
-    public LocalDateTime getStartTime() {
+    public String getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(LocalDateTime startTime) {
+    public void setStartTime(String startTime) {
         this.startTime = startTime;
     }
 
-    public LocalDateTime getEndTime() {
+    public String getEndTime() {
         return endTime;
     }
 
-    public void setEndTime(LocalDateTime endTime) {
+    public void setEndTime(String endTime) {
         this.endTime = endTime;
     }
 
-    public LocalDateTime getDateModify() {
+    public String getDateModify() {
         return dateModify;
     }
 
-    public void setDateModify(LocalDateTime dateModify) {
+    public void setDateModify(String dateModify) {
         this.dateModify = dateModify;
     }
 
@@ -114,5 +115,6 @@ public class ActivityDTO {
         this.responsibleId = responsibleId;
     }
 }
+
 
 
