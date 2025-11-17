@@ -12,7 +12,7 @@ public class DealDTO {
     // === Identificativi ===
     private Integer id;                 // ID Bitrix (opzionale per update)
     @JsonProperty("ID_ANAGRAFICA")
-    private String idAnagrafica;      // ID anagrafica per collegamento con contatto
+    private Long idAnagrafica;      // ID anagrafica per collegamento con contatto
 
     // === Campi principali ===
     private String title;               // TITLE
@@ -95,11 +95,11 @@ public class DealDTO {
         this.id = id;
     }
 
-    public String getIdAnagrafica() {
+    public Long getIdAnagrafica() {
         return idAnagrafica;
     }
 
-    public void setIdAnagrafica(String idAnagrafica) {
+    public void setIdAnagrafica(Long idAnagrafica) {
         this.idAnagrafica = idAnagrafica;
     }
 
