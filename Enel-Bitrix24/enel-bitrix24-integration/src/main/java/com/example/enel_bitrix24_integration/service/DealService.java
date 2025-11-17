@@ -346,14 +346,13 @@ public List<DealDTO> recuperaTuttiDeal() {
     }
 
 
- public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
+public List<LeadRequest> trovaContattiModificati(List<DealDTO> tuttiDeal) throws Exception {
     List<LeadRequest> modificati = new ArrayList<>();
 
     // Mappa veloce per convertire valore testuale in ResultCode
     Map<String, ResultCode> resultCodeMap = Arrays.stream(ResultCode.values())
             .collect(Collectors.toMap(rc -> rc.getEsito().toLowerCase(), rc -> rc));
 
-    // Log dei ResultCode disponibili
     logger.info("Lista ResultCode disponibili:");
     for (ResultCode rc : ResultCode.values()) {
         logger.info(" - {} -> esito='{}'", rc.name(), rc.getEsito());
@@ -379,47 +378,35 @@ public List<DealDTO> recuperaTuttiDeal() {
             continue;
         }
 
-        // Log diagnostico
-        String comments = contact.getCOMMENTS();
-        String sourceDescription = contact.getSOURCE_DESCRIPTION();
-        logger.info("Deal {} - contact {} - COMMENTS='{}' - SOURCE_DESCRIPTION='{}'",
-                dealId, contactId, comments, sourceDescription);
-
         // Mapping ResultCode
-        ResultCode mapped = ResultCode.UNKNOWN;
-        if (comments != null && !comments.isBlank()) {
-            String c = comments.trim().toLowerCase();
-            for (ResultCode rc : ResultCode.values()) {
-                if (c.contains(rc.getEsito().toLowerCase())) {
-                    mapped = rc;
-                    break;
-                }
-            }
-        }
-        logger.info("Deal {} - contact {} - Mapped ResultCode = {}", dealId, contactId, mapped);
+        ResultCode mapped = mapResultCodeFromComments(contact.getCOMMENTS(), resultCodeMap);
 
-        // Conversione SOURCE_DESCRIPTION in Long
-        Long extractedId = null;
-        try {
-            extractedId = (sourceDescription != null && !sourceDescription.isBlank())
-                    ? Long.valueOf(sourceDescription.trim())
-                    : null;
-        } catch (NumberFormatException e) {
-            logger.warn("⚠️ Deal {} - SOURCE_DESCRIPTION non numerico: '{}'", dealId, sourceDescription);
-        }
-        Long finalContactId = (extractedId != null ? extractedId : contactId);
-        logger.info("Deal {} - contact {} - Extracted contactId = {}", dealId, contactId, finalContactId);
+        // Estrazione contactId da SOURCE_DESCRIPTION con fallback
+        Long finalContactId = extractContactId(contact.getSOURCE_DESCRIPTION(), contactId, dealId);
 
-        // ✅ Creazione LeadRequest e aggiunta alla lista
-        LeadRequest lr = new LeadRequest();
-        lr.setContactId(finalContactId);
-        lr.setResultCode(mapped);
-        modificati.add(lr);
+        // Creazione LeadRequest con tutti i campi obbligatori
+        LeadRequest req = new LeadRequest();
+        req.setContactId(finalContactId);
+        req.setResultCode(mapped);
+
+        req.setCaller("3932644963");
+        req.setWorkedCode(extractPhone(contact));
+        req.setWorkedType("O");
+        req.setCampaignId(65704L);
+
+        // Date attività
+        setActivityDates(req, activityService.getUltimaActivityPerDeal(dealId));
+
+        modificati.add(req);
+
+        logger.info("Deal {} - contact {} - LeadRequest pronto per invio: resultCode={}, phone={}, dates {}->{}",
+                dealId, finalContactId, mapped, req.getWorked_Date(), req.getWorked_End_Date());
     }
 
     logger.info("✅ Totale contatti modificati trovati: {}", modificati.size());
     return modificati;
 }
+
 
 
 // --- Helper methods ---
