@@ -14,13 +14,11 @@ public class LeadRequest {
     @JsonProperty("workedCode")
     private String workedCode;
 
-    @JsonProperty("worked_Date")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
-    private LocalDateTime workedDate;
+     @JsonProperty("worked_Date")
+    private String workedDate;
 
     @JsonProperty("worked_End_Date")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
-    private LocalDateTime workedEndDate;
+    private String workedEndDate;
 
     @JsonProperty("resultCode")
     private ResultCode resultCode;  // puoi usare enum se vuoi
@@ -46,19 +44,19 @@ public class LeadRequest {
         this.workedCode = workedCode;
     }
 
-    public LocalDateTime getWorked_Date() {
+   public String getWorked_Date() {
         return workedDate;
     }
 
-    public void setWorked_Date(LocalDateTime worked_Date) {
+    public void setWorked_Date(String worked_Date) {
         this.workedDate = worked_Date;
     }
 
-    public LocalDateTime getWorked_End_Date() {
+    public String getWorked_End_Date() {
         return workedEndDate;
     }
 
-    public void setWorked_End_Date(LocalDateTime worked_End_Date) {
+    public void setWorked_End_Date(String worked_End_Date) {
         this.workedEndDate = worked_End_Date;
     }
 
