@@ -476,13 +476,14 @@ public class ContactService {
                     req.setResultCode(resultCode);
                     req.setCaller("AUTO_SCHEDULER");
 
-                    if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
-                        req.setWorked_Date(ultimaActivity.getStartTime());
-                        req.setWorked_End_Date(ultimaActivity.getEndTime());
+                     if (ultimaActivity != null && ultimaActivity.getStartTime() != null && ultimaActivity.getEndTime() != null) {
+                        req.setWorkedDate(ultimaActivity.getStartTime());
+                        req.setWorkedEndDate(ultimaActivity.getEndTime());
                     } else {
-                        req.setWorked_Date(String.valueOf(LocalDateTime.now()));
-                        req.setWorked_End_Date(String.valueOf(LocalDateTime.now().plusMinutes(2)));
+                        req.setWorkedDate(String.valueOf(LocalDateTime.now()));
+                        req.setWorkedEndDate(String.valueOf(LocalDateTime.now().plusMinutes(2)));
                     }
+
 
                     modificati.add(req);
                     cacheContatti.put(id.longValue(), nuovo);
