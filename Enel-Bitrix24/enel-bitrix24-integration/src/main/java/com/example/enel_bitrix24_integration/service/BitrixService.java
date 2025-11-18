@@ -66,8 +66,8 @@ public class BitrixService {
     /**
      * 📤 Invio di un contatto “lavorato” a Bitrix24 con retry
      */
-    public LeadResponse invioLavorato(LeadRequest leadRequest) {
-         String url = "https://enel.in-voice.biz/partner-api/v5/workedcontact";
+        public LeadResponse invioLavorato(LeadRequest leadRequest) {
+        String url = "https://enel.in-voice.biz/partner-api/v5/workedcontact";
         logger.info("📤 Invio a Enel [{}]", url);
 
         // ======================
@@ -113,18 +113,33 @@ public class BitrixService {
             try {
                 logger.info("📨 Invio contatto lavorato (JSON) tentativo {}: {}", attempt, leadRequest.getWorkedCode());
 
-                ResponseEntity<LeadResponse> response = restTemplate.exchange(
-                        url, HttpMethod.POST, entity, LeadResponse.class
+                // Chiediamo la risposta grezza (String), senza deserializzazione automatica
+                ResponseEntity<String> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.POST,
+                        entity,
+                        String.class
                 );
 
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    logger.info("✅ Invio riuscito al tentativo {}", attempt);
-                    logger.info("📬 Risposta Enel:\n{}",
-                            mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response.getBody()));
-                    return response.getBody();
-                } else {
+                // Log risposta RAW ESATTAMENTE come arriva dal servizio Enel
+                logger.info("📬 Risposta RAW:\n{}", response.getBody());
+
+                // Se la risposta NON è 2xx → gestiamo il fallimento
+                if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                     logger.warn("⚠️ Risposta non valida ({}): {}", response.getStatusCode(), response.getBody());
+                    continue; // Vai al prossimo tentativo
                 }
+
+                // Deserializziamo manualmente la String in LeadResponse
+                LeadResponse leadResponse = mapper.readValue(
+                        response.getBody(),
+                        LeadResponse.class
+                );
+
+                logger.info("📬 Risposta Enel (parsed):\n{}",
+                        mapper.writerWithDefaultPrettyPrinter().writeValueAsString(leadResponse));
+
+                return leadResponse;
 
             } catch (HttpClientErrorException | HttpServerErrorException e) {
                 logger.error("❌ Errore HTTP {} al tentativo {}: {} - {}",
@@ -152,6 +167,7 @@ public class BitrixService {
         fallback.setMessage("Errore imprevisto dopo " + maxRetry + " tentativi");
         return fallback;
     }
+
 
 
 
