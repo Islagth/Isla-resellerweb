@@ -83,7 +83,7 @@ public class BitrixService {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.setDateFormat(new SimpleDateFormat("yyyy/dd/MM HH:mm:ss"));
+        mapper.setDateFormat(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss"));
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         // Serializza solo i campi annotati con @JsonProperty
