@@ -447,7 +447,7 @@ private String extractPhone(ContactDTO contact) {
 
 private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"); // formato Enel CORRETTO
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"); // formato Enel CORRETTO
 
 
         LocalDateTime start = now;
@@ -480,8 +480,8 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         if (dateString == null || dateString.trim().isEmpty()) return null;
 
         List<DateTimeFormatter> formatters = List.of(
-                DateTimeFormatter.ofPattern("yyyy-dd-MM HH:mm:ss"),   // già presente
-                DateTimeFormatter.ofPattern("yyyy/dd/MM HH:mm:ss"),   // ⬅️ AGGIUNGERE QUI
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),   // già presente
+                DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),   // ⬅️ AGGIUNGERE QUI
                 DateTimeFormatter.ISO_DATE_TIME                       // già presente
         );
 
@@ -494,6 +494,7 @@ private void setActivityDates(LeadRequest req, ActivityDTO activity) {
         logger.warn("⚠️ Formato data non riconosciuto da Bitrix24: '{}'", dateString);
         return null;
     }
+
 
 
 
