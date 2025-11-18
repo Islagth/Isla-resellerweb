@@ -14,12 +14,12 @@ public class LeadRequest {
     @JsonProperty("workedCode")
     private String workedCode;
 
-      @JsonProperty("worked_date")
+     @JsonProperty("workedDate")
     private String workedDate;
 
-    @JsonProperty("worked_end_date")
+    @JsonProperty("workedEndDate")
     private String workedEndDate;
-
+    
     @JsonProperty("resultCode")
     private ResultCode resultCode;  // puoi usare enum se vuoi
 
