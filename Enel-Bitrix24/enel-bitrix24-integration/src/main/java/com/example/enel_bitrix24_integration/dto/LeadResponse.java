@@ -1,35 +1,39 @@
 package com.example.enel_bitrix24_integration.dto;
 
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonSetter;
+
 
 public class LeadResponse {
 
-    private boolean success;
+    private Boolean success;   // Boolean, non boolean!
     private Long workedId;
     private String message;
 
-    public boolean isSuccess() {
-        return success;
+    @JsonSetter("workedId")
+    public void setWorkedId(Long workedId) {
+        this.workedId = workedId;
+
+        if (this.success == null && workedId != null) {
+            this.success = true;
+        }
     }
 
-    public void setSuccess(boolean success) {
+    @JsonSetter("success")
+    public void setSuccess(Boolean success) {
         this.success = success;
     }
 
-    public Long getWorkedId() {
-        return workedId;
+    public Boolean getSuccess() {
+        return success != null ? success : false;
     }
 
-    public void setWorkedId(Long workedId) {
-        this.workedId = workedId;
-    }
+    public Long getWorkedId() { return workedId; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
+    public boolean isSuccess() {
+        return getSuccess();
     }
 }
+
 
